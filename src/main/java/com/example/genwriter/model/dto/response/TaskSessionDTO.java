@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class TaskSessionDTO {
 
     private String id;
+    private String projectId;
     private String title;
     private String type;
     private String status;

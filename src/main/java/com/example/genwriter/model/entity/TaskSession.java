@@ -21,6 +21,11 @@ public class TaskSession {
     private String id;
 
     /**
+     * 所属项目ID
+     */
+    private String projectId;
+
+    /**
      * 会话标题
      */
     private String title;
@@ -73,6 +78,7 @@ public class TaskSession {
         }
         TaskSession other = (TaskSession) that;
         return (this.getId() == null ? other.getId() == null : this.getId().equals(other.getId()))
+                && (this.getProjectId() == null ? other.getProjectId() == null : this.getProjectId().equals(other.getProjectId()))
                 && (this.getTitle() == null ? other.getTitle() == null : this.getTitle().equals(other.getTitle()))
                 && (this.getType() == null ? other.getType() == null : this.getType().equals(other.getType()))
                 && (this.getStatus() == null ? other.getStatus() == null : this.getStatus().equals(other.getStatus()))
@@ -88,6 +94,7 @@ public class TaskSession {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((getId() == null) ? 0 : getId().hashCode());
+        result = prime * result + ((getProjectId() == null) ? 0 : getProjectId().hashCode());
         result = prime * result + ((getTitle() == null) ? 0 : getTitle().hashCode());
         result = prime * result + ((getType() == null) ? 0 : getType().hashCode());
         result = prime * result + ((getStatus() == null) ? 0 : getStatus().hashCode());
@@ -105,6 +112,7 @@ public class TaskSession {
                 " [" +
                 "Hash = " + hashCode() +
                 ", id=" + id +
+                ", projectId=" + projectId +
                 ", title=" + title +
                 ", type=" + type +
                 ", status=" + status +

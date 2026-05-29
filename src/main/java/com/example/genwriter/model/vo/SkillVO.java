@@ -18,6 +18,9 @@ public class SkillVO {
     private String content;
     private String contentPreview;
     private boolean enabled;
-    private boolean builtIn;
     private String sourceFile;
+    private Boolean disableModelInvocation;
+    private Boolean userInvocable;
+    private List<String> allowedTools;
+    private String argumentHint;
 }

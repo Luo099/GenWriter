@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,27 +28,35 @@ public class ChapterSummaryServiceImpl implements ChapterSummaryService {
 
         try {
             ChatClient client = chatClientFactory.create(properties.getTemperature());
-            String summary = client.prompt()
-                    .system("""
-                            你是长篇写作的章节连续性摘要器。
-                            只基于给定章节内容总结已经发生的叙事状态，不新增设定，不纠错，不评价。
-                            输出一段自然中文文段，不要列表、标题、编号或 Markdown。
-                            必须覆盖：已发生内容、关键事实、角色/对象状态、未完成事项和下一章接续点。
-                            """)
-                    .user("""
-                            用户本章写作要求：
-                            %s
+            String systemPrompt = """
+                    You are a continuity summarizer for long-form Chinese fiction.
+                    Based only on the provided chapter, summarize the established narrative state.
+                    Do not invent new setting facts, judge quality, or add instructions.
+                    Output one concise Chinese paragraph without markdown, lists, titles, or numbering.
+                    Cover what happened, key facts, character/object states, unresolved items, and the next-chapter handoff point.
+                    """;
+            String userPrompt = """
+                    User chapter request:
+                    %s
 
-                            写作类型：%s
+                    Writing type:
+                    %s
 
-                            章节内容：
-                            %s
-                            """.formatted(safe(userInput), safe(writingType), finalOutput))
-                    .call()
-                    .content();
+                    Chapter content:
+                    %s
+                    """.formatted(safe(userInput), safe(writingType), finalOutput);
+
+            int timeoutSeconds = Math.max(1, properties.getTimeoutSeconds());
+            String summary = CompletableFuture.supplyAsync(() -> client.prompt()
+                            .system(systemPrompt)
+                            .user(userPrompt)
+                            .call()
+                            .content())
+                    .get(timeoutSeconds, TimeUnit.SECONDS);
             return truncate(clean(summary), properties.getMaxSummaryChars());
         } catch (Exception e) {
-            log.warn("章节摘要生成失败，跳过章节上下文: {}", e.getMessage());
+            log.warn("Chapter summary generation degraded; final content will be saved without continuity summary: {}",
+                    e.getMessage());
             return "";
         }
     }

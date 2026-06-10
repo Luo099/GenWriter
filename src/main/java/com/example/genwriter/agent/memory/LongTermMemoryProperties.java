@@ -42,6 +42,7 @@ public class LongTermMemoryProperties {
         private int maxQueries = 5;
         private int minArticleLength = 500;
         private double temperature = 0.1;
+        private int timeoutSeconds = 8;
     }
 
     @Data

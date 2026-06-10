@@ -14,9 +14,7 @@ import com.example.genwriter.agent.skill.WritingGenreResolver;
 import com.example.genwriter.agent.supervisor.WorkerAgent;
 import com.example.genwriter.agent.supervisor.WorkerRegistry;
 import com.example.genwriter.agent.tool.AgentToolSupport;
-import com.example.genwriter.agent.tool.SaveSettingDetailTool;
 import com.example.genwriter.agent.tool.SessionContextHolder;
-import com.example.genwriter.agent.tool.UpdateWritingSkillTool;
 import com.example.genwriter.message.AgentTraceEvent;
 import com.example.genwriter.message.ChainNode;
 import com.example.genwriter.model.dto.MultimodalContent;
@@ -29,10 +27,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.model.Media;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MimeType;
 import reactor.core.publisher.Mono;
@@ -41,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 
 @Slf4j
 @Component
@@ -58,8 +52,6 @@ public class DraftGenerationWorker implements WorkerAgent {
     private final LongTermMemoryProperties longTermMemoryProperties;
     private final LongTermMemoryProbeRecorder memoryProbeRecorder;
     private final ThoughtChainPublisher chainPublisher;
-    private final UpdateWritingSkillTool updateWritingSkillToolCallback;
-    private final SaveSettingDetailTool saveSettingDetailTool;
     private final ReasoningStreamHelper reasoningStreamHelper;
     private final ContentStreamPublisher contentStreamPublisher;
     private final FileStorageService fileStorageService;
@@ -69,26 +61,7 @@ public class DraftGenerationWorker implements WorkerAgent {
 
     @PostConstruct
     void init() {
-        ToolCallback skillToolCallback = FunctionToolCallback
-                .builder("update_writing_skill",
-                        (BiFunction<UpdateWritingSkillTool.UpdateWritingSkillInput, ToolContext, String>)
-                                updateWritingSkillToolCallback::applyWithContext)
-                .description("Save a reusable writing skill or technique to long-term memory. Use this tool when the user has taught or demonstrated a writing style, technique, or rule that should be remembered and applied in future writing tasks.")
-                .inputType(UpdateWritingSkillTool.UpdateWritingSkillInput.class)
-                .build();
-
-        ToolCallback settingDetailCallback = FunctionToolCallback
-                .builder("save_setting_detail",
-                        (BiFunction<SaveSettingDetailTool.SaveSettingDetailInput, ToolContext, String>)
-                                saveSettingDetailTool::applyWithContext)
-                .description("Save a world setting, character profile, or plot detail (foreshadowing) to long-term memory. Use this tool when you define or introduce setting details during content creation to ensure consistency in future writing.")
-                .inputType(SaveSettingDetailTool.SaveSettingDetailInput.class)
-                .build();
-
-        this.chatClient = chatClientFactory.create(TEMPERATURE)
-                .mutate()
-                .defaultTools(skillToolCallback, settingDetailCallback)
-                .build();
+        this.chatClient = chatClientFactory.create(TEMPERATURE);
         registry.register(this);
     }
 

@@ -8,6 +8,7 @@ import {
   getDocumentsBySessionId,
   updateDocument,
 } from '../api/documents';
+import ConfirmDialog from './ConfirmDialog';
 import '../styles/global.css';
 
 const ITERATION_MODES = [
@@ -64,6 +65,7 @@ const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh,
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const dirtyRef = useRef(false);
+  const [confirmState, setConfirmState] = useState({ open: false });
 
   const selectedDocument = documents.find((doc) => doc.id === selectedId) || null;
 
@@ -180,10 +182,20 @@ const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh,
   };
 
   const handleSelectVersion = (document) => {
-    if (dirty && !window.confirm('当前版本有未保存修改，切换后会丢失这些修改。继续切换吗？')) {
-      return;
+    if (dirty) {
+      setConfirmState({
+        open: true,
+        title: '未保存的修改',
+        message: '当前版本有未保存修改，切换后会丢失这些修改。继续切换吗？',
+        variant: 'warning',
+        confirmText: '继续切换',
+        onConfirm: () => {
+          selectDocument(document);
+        },
+      });
+    } else {
+      selectDocument(document);
     }
-    selectDocument(document);
   };
 
   const handleIterate = async () => {
@@ -325,6 +337,11 @@ const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh,
           {error || notice || `${selectedDocument?.title || emptyTitle} · ${formatTime(selectedDocument?.updatedAt)}`}
         </div>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => setConfirmState({ open: false })}
+      />
     </aside>
   );
 };

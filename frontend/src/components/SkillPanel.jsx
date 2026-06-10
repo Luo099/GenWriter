@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import * as skillsApi from '../api/skills';
+import ConfirmDialog from './ConfirmDialog';
 import '../styles/global.css';
 
 const CATEGORY_MAP = {
@@ -108,6 +109,7 @@ const SkillPanel = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('metadata');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFullPreview, setShowFullPreview] = useState(false);
+  const [confirmState, setConfirmState] = useState({ open: false });
 
   const fetchSkills = useCallback(async () => {
     setLoading(true);
@@ -310,17 +312,22 @@ const SkillPanel = ({ onBack }) => {
     }
   };
 
-  const handleDelete = async (skill) => {
-    if (!window.confirm(`确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`)) {
-      return;
-    }
-    try {
-      await skillsApi.deleteSkill(skill.name);
-      await fetchSkills();
-      await fetchCategories();
-    } catch (e) {
-      setError(e.message);
-    }
+  const handleDelete = (skill) => {
+    setConfirmState({
+      open: true,
+      title: '删除技能',
+      message: `确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await skillsApi.deleteSkill(skill.name);
+          await fetchSkills();
+          await fetchCategories();
+        } catch (e) {
+          setError(e.message);
+        }
+      },
+    });
   };
 
   const updateField = (field, value) => {
@@ -748,6 +755,11 @@ const SkillPanel = ({ onBack }) => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => setConfirmState({ open: false })}
+      />
     </div>
   );
 };

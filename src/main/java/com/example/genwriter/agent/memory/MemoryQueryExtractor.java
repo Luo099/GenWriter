@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 从文章中提取关键细节，生成多个长期记忆检索query
@@ -48,10 +50,12 @@ public class MemoryQueryExtractor {
             double temperature = properties.getArticleQueryExtraction().getTemperature();
             ChatClient client = chatClientFactory.create(temperature);
 
-            String response = client.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            int timeoutSeconds = Math.max(1, properties.getArticleQueryExtraction().getTimeoutSeconds());
+            String response = CompletableFuture.supplyAsync(() -> client.prompt()
+                            .user(prompt)
+                            .call()
+                            .content())
+                    .get(timeoutSeconds, TimeUnit.SECONDS);
 
             List<String> queries = parseResponse(response);
             int maxQueries = properties.getArticleQueryExtraction().getMaxQueries();

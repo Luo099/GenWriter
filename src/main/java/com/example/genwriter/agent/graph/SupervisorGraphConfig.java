@@ -49,6 +49,9 @@ public class SupervisorGraphConfig {
                 .addStrategy("reviewResult", KeyStrategy.REPLACE)
                 .addStrategy("reviewFeedback", KeyStrategy.REPLACE)
                 .addStrategy("reviewCount", KeyStrategy.REPLACE)
+                .addStrategy("workflowFailed", KeyStrategy.REPLACE)
+                .addStrategy("failedWorker", KeyStrategy.REPLACE)
+                .addStrategy("failureMessage", KeyStrategy.REPLACE)
                 .addStrategy("learningReport", KeyStrategy.REPLACE)
                 .addStrategy("storedCount", KeyStrategy.REPLACE)
                 .build();

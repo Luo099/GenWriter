@@ -14,11 +14,11 @@ spring:
       force: true
   ai:
     dashscope:
-      api-key: sk-63eddc9cd84341debf5b63a04c5f3cbe
+      api-key: ${DASHSCOPE_API_KEY:}
       chat:
         enabled: true
         options:
-          model: qwen3.7-max
+          model: qwen-plus
           temperature: 0.7
       embedding:
         enabled: true
@@ -82,6 +82,19 @@ logging:
   file:
     name: logs/genwriter.log
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:GenWriter}
+
 app:
   embedding:
     default-model: text-embedding-v4
@@ -117,15 +130,28 @@ app:
     allowed-document-extensions: pdf,doc,docx,txt,md,csv,json,xml
 
 genwriter:
+  observability:
+    enabled: true
+    trace-persistence-enabled: true
+    metrics-enabled: true
+    sse-trace-enabled: true
+    success-sample-rate: 1.0
+    retention-days: 14
+    text-summary-limit: 240
+    include-error-details: true
   llm:
-    default-provider: deepseek
-    default-model: deepseek-v4-flash
+    default-provider: openai
+    default-model: gpt-5.5
     default-temperature: 0.7
     default-max-tokens: 65535
     models:
       - name: deepseek-v4-flash
         supportsVision: false
+      - name: gpt-5.5
+        supportsVision: false
       - name: qwen3.7-max
+        supportsVision: false
+      - name: qwen-plus
         supportsVision: false
       - name: qwen-turbo
         supportsVision: false
@@ -138,15 +164,15 @@ genwriter:
     providers:
       - type: dashscope
         display-name: 通义千问
-        api-key: sk-63eddc9cd84341debf5b63a04c5f3cbe
+        api-key: ${DASHSCOPE_API_KEY:}
         models:
           - qwen3.7-max
-          - qwen3.7-max
+          - qwen-plus
           - qwen-turbo
-        active-model: qwen3.7-max
+        active-model: qwen-plus
       - type: deepseek
         display-name: DeepSeek
-        api-key: sk-69e495de58b84ff5a226de87a4bc5f08
+        api-key: ${DEEPSEEK_API_KEY:}
         base-url: https://api.deepseek.com
         api-compatibility: openai_compatible
         reasoning: true
@@ -154,6 +180,14 @@ genwriter:
           - deepseek-v4-flash
           - deepseek-v4-pro
         active-model: deepseek-v4-flash
+      - type: openai
+        display-name: OpenAI
+        api-key: ${OPENAI_API_KEY:}
+        base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+        api-compatibility: openai_compatible
+        models:
+          - gpt-5.5
+        active-model: gpt-5.5
   embedding:
     default-model: text-embedding-v4
     dimension: 1024
@@ -177,6 +211,7 @@ genwriter:
       max-summaries: 2
       max-summary-chars: 600
       temperature: 0.2
+      timeout-seconds: 8
   checkpoint:
     enabled: true
     key-prefix: "genwriter:graph:checkpoint:"
@@ -186,7 +221,7 @@ genwriter:
     max-search-results-per-query: 10
     enabled: true
   websearch:
-    api-key: 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
+    api-key: ${TAVILY_API_KEY:}
     timeout-seconds: 30
   long-term-memory:
     enabled: true
@@ -207,6 +242,7 @@ genwriter:
       max-queries: 5
       min-article-length: 500
       temperature: 0.1
+      timeout-seconds: 8
     writing-skill-extraction:
       enabled: true
       async: true

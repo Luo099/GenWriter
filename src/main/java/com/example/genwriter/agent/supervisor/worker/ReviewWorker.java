@@ -18,6 +18,7 @@ import com.example.genwriter.agent.tool.AgentToolSupport;
 import com.example.genwriter.agent.tool.SessionContextHolder;
 import com.example.genwriter.message.AgentTraceEvent;
 import com.example.genwriter.message.ChainNode;
+import com.example.genwriter.message.SseMessage;
 import com.example.genwriter.model.enums.MemoryType;
 import com.example.genwriter.service.LongTermMemoryService;
 import com.example.genwriter.service.SseService;
@@ -170,8 +171,22 @@ public class ReviewWorker implements WorkerAgent {
                     Map.of("outputLength", response != null ? response.length() : 0));
         } catch (Exception e) {
             chainPublisher.publishTraceError(sessionId, llmSpanId, e.getMessage());
-            chainPublisher.publishError(sessionId, nodeId, e.getMessage());
             SessionContextHolder.clear();
+            if (polishedContent != null && !polishedContent.isBlank()) {
+                log.warn("[ReviewWorker] review model failed, falling back to PASS so polished content can be saved: sessionId={}, contentLength={}, error={}",
+                        sessionId, polishedContent.length(), e.getMessage(), e);
+                publishReviewFallbackNotice(sessionId);
+                chainPublisher.publishComplete(sessionId, nodeId,
+                        Map.of("score", 0, "verdict", "PASS", "reviewFallback", true,
+                                "feedback", "Review model unavailable; accepted polished content."));
+                return Map.of(
+                        "reviewResult", "PASS",
+                        "reviewFeedback", "Review model unavailable; accepted polished content.",
+                        "reviewFallback", true,
+                        "reviewCount", reviewCount + 1
+                );
+            }
+            chainPublisher.publishError(sessionId, nodeId, e.getMessage());
             throw e;
         } finally {
             SessionContextHolder.clear();
@@ -191,6 +206,22 @@ public class ReviewWorker implements WorkerAgent {
                 "reviewFeedback", feedback,
                 "reviewCount", reviewCount + 1
         );
+    }
+
+    private void publishReviewFallbackNotice(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        try {
+            sseService.publish(sessionId, SseMessage.builder()
+                    .type(SseMessage.Type.AI_THINKING)
+                    .payload(SseMessage.Payload.builder()
+                            .statusText("【明显提示】内容评审模型暂不可用，系统已保留并保存润色后的正文；请以人工质量检查结论为准。")
+                            .build())
+                    .build());
+        } catch (Exception ex) {
+            log.debug("Failed to publish review fallback notice: {}", ex.getMessage());
+        }
     }
 
     private ReviewResult parseReviewResult(String response) {

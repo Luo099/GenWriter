@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as memoriesApi from '../api/memories';
+import ConfirmDialog from './ConfirmDialog';
 import '../styles/global.css';
 
 const MEMORY_TYPE_MAP = {
@@ -57,6 +58,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmState, setConfirmState] = useState({ open: false });
 
   const fetchMemories = useCallback(async () => {
     setLoading(true);
@@ -173,28 +175,42 @@ const MemoryPanel = ({ projectId, onBack }) => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('确定要删除这条记忆吗？')) return;
-    setDeletingId(id);
-    try {
-      await memoriesApi.deleteMemory(id);
-      fetchMemories();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (id) => {
+    setConfirmState({
+      open: true,
+      title: '删除记忆',
+      message: '确定要删除这条记忆吗？此操作无法撤销。',
+      variant: 'danger',
+      onConfirm: async () => {
+        setDeletingId(id);
+        try {
+          await memoriesApi.deleteMemory(id);
+          fetchMemories();
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`确定要删除选中的 ${selectedIds.size} 条记忆吗？`)) return;
-    try {
-      await memoriesApi.batchDeleteMemories(Array.from(selectedIds));
-      fetchMemories();
-    } catch (e) {
-      setError(e.message);
-    }
+    setConfirmState({
+      open: true,
+      title: '批量删除记忆',
+      message: `确定要删除选中的 ${selectedIds.size} 条记忆吗？此操作无法撤销。`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await memoriesApi.batchDeleteMemories(Array.from(selectedIds));
+          fetchMemories();
+        } catch (e) {
+          setError(e.message);
+        }
+      },
+    });
   };
 
   const toggleSelect = (id) => {
@@ -470,6 +486,11 @@ const MemoryPanel = ({ projectId, onBack }) => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => setConfirmState({ open: false })}
+      />
     </div>
   );
 };

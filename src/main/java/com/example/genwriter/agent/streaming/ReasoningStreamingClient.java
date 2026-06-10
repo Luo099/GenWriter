@@ -2,6 +2,9 @@ package com.example.genwriter.agent.streaming;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -12,21 +15,19 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * 推理模型流式客户端
- * 通过原始 SSE 调用 chat/completions 接口，解析 reasoning_content 字段
- * 支持所有兼容该接口的推理模型供应商
- */
 @Slf4j
 @Component
 public class ReasoningStreamingClient {
 
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
-    public ReasoningStreamingClient(ObjectMapper objectMapper) {
+    public ReasoningStreamingClient(ObjectMapper objectMapper, MeterRegistry meterRegistry) {
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     public record StreamingResult(String reasoningContent, String content) {}
@@ -36,23 +37,13 @@ public class ReasoningStreamingClient {
         void onContentChunk(String chunk);
     }
 
-    /**
-     * 流式调用推理模型 API，支持 reasoning_content 解析
-     *
-     * @param baseUrl          API 基础地址（不可为空）
-     * @param apiKey           API 密钥
-     * @param model            模型名称
-     * @param messages         消息列表
-     * @param temperature      温度参数
-     * @param enableThinking   是否启用思考模式（部分供应商特有参数）
-     * @param callback         内容回调
-     * @return 流式调用结果
-     */
     public StreamingResult stream(String baseUrl, String apiKey, String model,
                                   List<Map<String, String>> messages, double temperature,
                                   boolean enableThinking, ChunkCallback callback) {
+        long startNanos = System.nanoTime();
         if (baseUrl == null || baseUrl.isBlank()) {
-            throw new IllegalStateException("base-url 不能为空，请在 application.yml 中配置供应商的 base-url");
+            recordStream(model, "config_error", startNanos);
+            throw new IllegalStateException("base-url must be configured for reasoning streaming");
         }
 
         Map<String, Object> body = new java.util.LinkedHashMap<>();
@@ -66,7 +57,6 @@ public class ReasoningStreamingClient {
 
         AtomicReference<StringBuilder> reasoningBuilder = new AtomicReference<>(new StringBuilder());
         AtomicReference<StringBuilder> contentBuilder = new AtomicReference<>(new StringBuilder());
-
         String finalBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
 
         try {
@@ -89,9 +79,16 @@ public class ReasoningStreamingClient {
                     .doOnError(e -> log.warn("SSE streaming error: {}", e.getMessage()))
                     .blockLast(Duration.ofMinutes(10));
         } catch (Exception e) {
-            log.warn("SSE streaming failed: {}", e.getMessage());
+            recordStream(model, "error", startNanos);
+            throw new IllegalStateException("Reasoning model streaming failed: " + e.getMessage(), e);
         }
 
+        if (contentBuilder.get().isEmpty()) {
+            recordStream(model, "empty", startNanos);
+            throw new IllegalStateException("Reasoning model streaming returned no content");
+        }
+
+        recordStream(model, "success", startNanos);
         return new StreamingResult(reasoningBuilder.get().toString(), contentBuilder.get().toString());
     }
 
@@ -109,7 +106,6 @@ public class ReasoningStreamingClient {
             JsonNode delta = root.path("choices").path(0).path("delta");
             if (delta.isMissingNode()) return;
 
-            // 提取 reasoning_content（推理模型通用字段）
             JsonNode reasoningNode = delta.get("reasoning_content");
             if (reasoningNode != null && !reasoningNode.isNull()) {
                 String reasoning = reasoningNode.asText("");
@@ -119,7 +115,6 @@ public class ReasoningStreamingClient {
                 }
             }
 
-            // 提取 content
             JsonNode contentNode = delta.get("content");
             if (contentNode != null && !contentNode.isNull()) {
                 String content = contentNode.asText("");
@@ -131,5 +126,23 @@ public class ReasoningStreamingClient {
         } catch (Exception e) {
             log.debug("Failed to parse SSE chunk: {}", e.getMessage());
         }
+    }
+
+    private void recordStream(String model, String status, long startNanos) {
+        Counter.builder("genwriter_reasoning_stream_requests_total")
+                .tag("model", safe(model))
+                .tag("status", status)
+                .register(meterRegistry)
+                .increment();
+        Timer.builder("genwriter_reasoning_stream_duration")
+                .tag("model", safe(model))
+                .tag("status", status)
+                .publishPercentileHistogram()
+                .register(meterRegistry)
+                .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "unknown" : value;
     }
 }

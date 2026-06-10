@@ -35,6 +35,16 @@ public class AgentTraceEvent {
     private Long endedAt;
     private Long durationMs;
     private Long timestamp;
+    private String runId;
+    private String provider;
+    private String model;
+    private Map<String, Object> tokenUsage;
+    private Double costEstimate;
+    private Integer inputChars;
+    private Integer outputChars;
+    private String status;
+    private String errorCode;
+    private Boolean sampled;
 
     public enum Kind {
         SUPERVISOR,

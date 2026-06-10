@@ -187,6 +187,14 @@ public class StateGraphRunner {
             inputs.put("writingType", writingType != null ? writingType : "AUTO");
             inputs.put("context", context);
             inputs.put("webSearch", String.valueOf(webSearch));
+            // Reset per-run terminal flags that may be restored from graph checkpoints.
+            inputs.put("workflowFailed", false);
+            inputs.put("failedWorker", "");
+            inputs.put("failureMessage", "");
+            inputs.put("finalOutput", "");
+            inputs.put("reviewResult", "");
+            inputs.put("reviewFeedback", "");
+            inputs.put("reviewCount", 0);
             if (selectedDocument != null) {
                 String selectedContent = selectedDocument.getContent() != null ? selectedDocument.getContent() : "";
                 inputs.put("draft", selectedContent);
@@ -204,6 +212,19 @@ public class StateGraphRunner {
 
             if (result.isPresent()) {
                 OverAllState state = result.get();
+                boolean workflowFailed = state.value("workflowFailed", Boolean.class).orElse(false);
+                if (workflowFailed) {
+                    String failedWorker = state.value("failedWorker", String.class).orElse("unknown");
+                    String failureMessage = state.value("failureMessage", String.class).orElse("");
+                    String errorMessage = "处理失败："
+                            + failedWorker
+                            + " 步骤执行失败；系统未保存旧稿为新章节。"
+                            + (failureMessage.isBlank() ? "" : " 原因：" + failureMessage);
+                    persistErrorMessage(sessionId, errorMessage);
+                    log.warn("Supervisor workflow failed: sessionId={}, failedWorker={}, error={}",
+                            sessionId, failedWorker, failureMessage);
+                    return;
+                }
                 String finalOutput = state.value("finalOutput", String.class).orElse(null);
 
                 if (finalOutput != null && !finalOutput.isBlank()) {

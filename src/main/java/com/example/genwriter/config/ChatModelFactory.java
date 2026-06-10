@@ -102,9 +102,10 @@ public class ChatModelFactory {
                 .build();
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .model(config.getActiveModel())
+                .internalToolExecutionEnabled(false)
                 .build();
         return new OpenAiChatModel(api, options, functionCallbackResolver, functionCallbacks,
-                RetryUtils.DEFAULT_RETRY_TEMPLATE);
+                RetryUtils.SHORT_RETRY_TEMPLATE);
     }
 
     private ChatModel createOpenAiCompatible(LLMConfig.ProviderConfig config) {
@@ -118,9 +119,10 @@ public class ChatModelFactory {
                 .build();
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .model(config.getActiveModel())
+                .internalToolExecutionEnabled(false)
                 .build();
         return new OpenAiChatModel(api, options, functionCallbackResolver, functionCallbacks,
-                RetryUtils.DEFAULT_RETRY_TEMPLATE);
+                RetryUtils.SHORT_RETRY_TEMPLATE);
     }
 
     private ChatModel createAnthropic(LLMConfig.ProviderConfig config) {

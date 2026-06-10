@@ -3,6 +3,7 @@ package com.example.genwriter.agent.graph.node;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.example.genwriter.agent.streaming.ContentStreamPublisher;
+import com.example.genwriter.message.SseMessage;
 import com.example.genwriter.model.dto.request.CreateDocumentRequest;
 import com.example.genwriter.model.dto.response.DocumentDTO;
 import com.example.genwriter.service.DocumentService;
@@ -38,6 +39,18 @@ public class SsePublishNode implements NodeAction {
         String sessionId = state.value("sessionId", String.class).orElse("");
         String documentId = state.value("documentId", String.class).orElse(null);
         String finalOutput = state.value("finalOutput", String.class).orElse("");
+        boolean workflowFailed = state.value("workflowFailed", Boolean.class).orElse(false);
+        if (workflowFailed) {
+            String failedWorker = state.value("failedWorker", String.class).orElse("unknown");
+            String failureMessage = state.value("failureMessage", String.class).orElse("");
+            log.warn("Skip final content publish because workflow failed: sessionId={}, failedWorker={}, error={}",
+                    sessionId,
+                    failedWorker,
+                    failureMessage);
+            publishWorkflowFailure(sessionId, failedWorker, failureMessage);
+            sseService.complete(sessionId);
+            return Map.of("currentNode", "SsePublishNode", "workflowFailed", true);
+        }
 
         if (finalOutput != null && !finalOutput.isBlank()) {
             DocumentDTO generatedDocument = null;
@@ -122,6 +135,32 @@ public class SsePublishNode implements NodeAction {
                 .build();
 
         return documentService.createNewVersion(sessionId, request);
+    }
+
+    private void publishWorkflowFailure(String sessionId, String failedWorker, String failureMessage) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        String displayMessage = "【明显提示】本轮创作已停止："
+                + failedWorker
+                + " 步骤执行失败；系统不会把旧稿保存为新章节。"
+                + (failureMessage == null || failureMessage.isBlank() ? "" : " 原因：" + failureMessage);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("message", displayMessage);
+        data.put("failedWorker", failedWorker);
+        data.put("failureMessage", failureMessage);
+        data.put("workflowFailed", true);
+        try {
+            sseService.publish(sessionId, SseMessage.builder()
+                    .type(SseMessage.Type.ERROR)
+                    .payload(SseMessage.Payload.builder()
+                            .data(data)
+                            .statusText(displayMessage)
+                            .build())
+                    .build());
+        } catch (Exception e) {
+            log.debug("Workflow failure publish failed: sessionId={}, error={}", sessionId, e.getMessage());
+        }
     }
 
     private boolean isKnowledgeQaResult(OverAllState state) {

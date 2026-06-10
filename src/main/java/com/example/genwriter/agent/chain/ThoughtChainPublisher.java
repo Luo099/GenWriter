@@ -3,6 +3,9 @@ package com.example.genwriter.agent.chain;
 import com.example.genwriter.message.AgentTraceEvent;
 import com.example.genwriter.message.ChainNode;
 import com.example.genwriter.message.SseMessage;
+import com.example.genwriter.observability.ObservabilityProperties;
+import com.example.genwriter.observability.RunContextHolder;
+import com.example.genwriter.service.ObservabilityService;
 import com.example.genwriter.service.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ThoughtChainPublisher {
 
     private final SseService sseService;
+    private final ObservabilityService observabilityService;
+    private final ObservabilityProperties observabilityProperties;
 
     private final Map<String, Long> startTimes = new ConcurrentHashMap<>();
     private final Map<String, TraceSpan> traceSpans = new ConcurrentHashMap<>();
@@ -31,6 +36,9 @@ public class ThoughtChainPublisher {
         long now = System.currentTimeMillis();
         String effectiveParentId = parentId != null ? parentId
                 : com.example.genwriter.agent.tool.SessionContextHolder.getCurrentSpanId();
+        if (effectiveParentId == null) {
+            effectiveParentId = RunContextHolder.rootSpanId();
+        }
         startTimes.put(nodeId, now);
         traceSpans.put(nodeId, new TraceSpan(sessionId, effectiveParentId, nodeName, resolveKind(nodeType), now));
 
@@ -210,12 +218,13 @@ public class ThoughtChainPublisher {
                                     String parentSpanId, Object input, Map<String, Object> metadata) {
         String spanId = generateNodeId(name);
         long now = System.currentTimeMillis();
-        traceSpans.put(spanId, new TraceSpan(sessionId, parentSpanId, name, kind, now));
+        String effectiveParentId = parentSpanId != null ? parentSpanId : RunContextHolder.rootSpanId();
+        traceSpans.put(spanId, new TraceSpan(sessionId, effectiveParentId, name, kind, now));
         publishTraceEvent(sessionId, AgentTraceEvent.builder()
                 .traceId(sessionId)
                 .eventId(generateEventId())
                 .spanId(spanId)
-                .parentSpanId(parentSpanId)
+                .parentSpanId(effectiveParentId)
                 .kind(kind.name())
                 .phase(AgentTraceEvent.Phase.STARTED.name())
                 .name(name)
@@ -328,6 +337,8 @@ public class ThoughtChainPublisher {
 
     private void publishTraceEvent(String sessionId, AgentTraceEvent event) {
         if (sessionId == null || sessionId.isBlank()) return;
+        observabilityService.recordTraceEvent(sessionId, event);
+        if (!observabilityProperties.isSseTraceEnabled()) return;
         try {
             sseService.publish(sessionId, SseMessage.builder()
                     .type(SseMessage.Type.AI_TRACE_EVENT)

@@ -1,6 +1,10 @@
 package com.example.genwriter.config;
 
 import lombok.extern.slf4j.Slf4j;
+import com.example.genwriter.observability.RunContextHolder;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -28,14 +32,16 @@ public class DynamicChatModel implements ChatModel {
      * 已注册的模型映射
      */
     private final Map<String, ChatModel> modelRegistry = new ConcurrentHashMap<>();
+    private final MeterRegistry meterRegistry;
 
     /**
      * 默认模型名称
      */
     private final String defaultModelName;
 
-    public DynamicChatModel(String defaultModelName) {
+    public DynamicChatModel(String defaultModelName, MeterRegistry meterRegistry) {
         this.defaultModelName = defaultModelName;
+        this.meterRegistry = meterRegistry;
         this.activeModel.set(defaultModelName);
     }
 
@@ -108,16 +114,63 @@ public class DynamicChatModel implements ChatModel {
 
     @Override
     public ChatResponse call(Prompt prompt) {
-        return getCurrentModel().call(prompt);
+        String modelKey = activeModel.get();
+        String[] tags = modelTags(modelKey);
+        RunContextHolder.putModel(tags[0], tags[1]);
+        long startNanos = System.nanoTime();
+        try {
+            ChatResponse response = getCurrentModel().call(prompt);
+            recordCall(tags[0], tags[1], "call", "success", startNanos);
+            return response;
+        } catch (RuntimeException e) {
+            recordCall(tags[0], tags[1], "call", "error", startNanos);
+            throw e;
+        }
     }
 
     @Override
     public Flux<ChatResponse> stream(Prompt prompt) {
-        return getCurrentModel().stream(prompt);
+        String modelKey = activeModel.get();
+        String[] tags = modelTags(modelKey);
+        RunContextHolder.putModel(tags[0], tags[1]);
+        long startNanos = System.nanoTime();
+        return getCurrentModel().stream(prompt)
+                .doOnComplete(() -> recordCall(tags[0], tags[1], "stream", "success", startNanos))
+                .doOnError(e -> recordCall(tags[0], tags[1], "stream", "error", startNanos));
     }
 
     @Override
     public ChatOptions getDefaultOptions() {
         return getCurrentModel().getDefaultOptions();
+    }
+
+    private void recordCall(String provider, String model, String mode, String status, long startNanos) {
+        Counter.builder("genwriter_llm_requests_total")
+                .tag("provider", provider)
+                .tag("model", model)
+                .tag("mode", mode)
+                .tag("status", status)
+                .register(meterRegistry)
+                .increment();
+        Timer.builder("genwriter_llm_request_duration")
+                .tag("provider", provider)
+                .tag("model", model)
+                .tag("mode", mode)
+                .tag("status", status)
+                .publishPercentileHistogram()
+                .register(meterRegistry)
+                .record(System.nanoTime() - startNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+    }
+
+    private String[] modelTags(String modelKey) {
+        if (modelKey != null && modelKey.contains(":")) {
+            String[] parts = modelKey.split(":", 2);
+            return new String[] { safe(parts[0]), safe(parts[1]) };
+        }
+        return new String[] { "unknown", safe(modelKey) };
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "unknown" : value;
     }
 }

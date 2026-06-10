@@ -15,7 +15,6 @@ import com.example.genwriter.agent.skill.WritingGenreResolver;
 import com.example.genwriter.agent.supervisor.WorkerAgent;
 import com.example.genwriter.agent.supervisor.WorkerRegistry;
 import com.example.genwriter.agent.tool.SessionContextHolder;
-import com.example.genwriter.agent.tool.UpdateWritingSkillTool;
 import com.example.genwriter.message.AgentTraceEvent;
 import com.example.genwriter.message.ChainNode;
 import com.example.genwriter.model.dto.MultimodalContent;
@@ -29,12 +28,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.model.Media;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MimeType;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +53,6 @@ public class PolishWorker implements WorkerAgent {
     private final LongTermMemoryProbeRecorder memoryProbeRecorder;
     private final ThoughtChainPublisher chainPublisher;
     private final MemoryQueryExtractor memoryQueryExtractor;
-    private final UpdateWritingSkillTool updateWritingSkillToolCallback;
     private final ReasoningStreamHelper reasoningStreamHelper;
     private final ContentStreamPublisher contentStreamPublisher;
     private final FileStorageService fileStorageService;
@@ -65,17 +62,7 @@ public class PolishWorker implements WorkerAgent {
 
     @PostConstruct
     void init() {
-        ToolCallback skillToolCallback = FunctionToolCallback
-                .builder("update_writing_skill", (java.util.function.Function<UpdateWritingSkillTool.UpdateWritingSkillInput, String>)
-                        updateWritingSkillToolCallback)
-                .description("Save a reusable writing skill or technique to long-term memory. Use this tool when the user has taught or demonstrated a writing style, technique, or rule that should be remembered and applied in future writing tasks.")
-                .inputType(UpdateWritingSkillTool.UpdateWritingSkillInput.class)
-                .build();
-
-        this.chatClient = chatClientFactory.create(TEMPERATURE)
-                .mutate()
-                .defaultTools(skillToolCallback)
-                .build();
+        this.chatClient = chatClientFactory.create(TEMPERATURE);
         registry.register(this);
     }
 
@@ -221,7 +208,7 @@ public class PolishWorker implements WorkerAgent {
                                     ContentStreamPublisher.Stage.POLISH, chunk, contentBuilder);
                         })
                         .then(Mono.just(contentBuilder.toString()))
-                        .block();
+                        .block(Duration.ofMinutes(5));
                 chainPublisher.publishTraceComplete(sessionId, llmSpanId,
                         Map.of("outputLength", contentBuilder.length()));
             }

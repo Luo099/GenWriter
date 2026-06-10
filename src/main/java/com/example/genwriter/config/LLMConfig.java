@@ -27,7 +27,7 @@ public class LLMConfig {
     /**
      * 默认模型名称
      */
-    private String defaultModel = "qwen3.7-max";
+    private String defaultModel = "deepseek-v4-flash";
 
     /**
      * 请求超时时间

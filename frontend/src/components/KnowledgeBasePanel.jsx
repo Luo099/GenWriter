@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import KnowledgeBaseDetail from './KnowledgeBaseDetail';
+import ConfirmDialog from './ConfirmDialog';
 import '../styles/global.css';
 
 const KB_TYPE_MAP = {
@@ -29,6 +30,7 @@ const KnowledgeBasePanel = ({ onBack }) => {
   const [saving, setSaving] = useState(false);
 
   const [detailKbId, setDetailKbId] = useState(null);
+  const [confirmState, setConfirmState] = useState({ open: false });
 
   const fetchKnowledgeBases = useCallback(async () => {
     setLoading(true);
@@ -125,14 +127,21 @@ const KnowledgeBasePanel = ({ onBack }) => {
     }
   };
 
-  const handleDelete = async (kb) => {
-    if (!window.confirm(`确定要删除知识库"${kb.name}"吗？`)) return;
-    try {
-      await knowledgeBasesApi.deleteKnowledgeBase(kb.id);
-      fetchKnowledgeBases();
-    } catch (e) {
-      setError(e.message);
-    }
+  const handleDelete = (kb) => {
+    setConfirmState({
+      open: true,
+      title: '删除知识库',
+      message: `确定要删除知识库"${kb.name}"吗？此操作无法撤销。`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await knowledgeBasesApi.deleteKnowledgeBase(kb.id);
+          fetchKnowledgeBases();
+        } catch (e) {
+          setError(e.message);
+        }
+      },
+    });
   };
 
   if (detailKbId) {
@@ -336,6 +345,11 @@ const KnowledgeBasePanel = ({ onBack }) => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => setConfirmState({ open: false })}
+      />
     </div>
   );
 };

@@ -22,5 +22,6 @@ public class SupervisorModeProperties {
         private int maxSummaries = 2;
         private int maxSummaryChars = 600;
         private double temperature = 0.2;
+        private int timeoutSeconds = 8;
     }
 }

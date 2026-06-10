@@ -1,31 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkingPanel from './ThinkingPanel';
 import FileViewerModal from './FileViewerModal';
 import { getAttachmentUrl, getThumbnailUrl } from '../api/attachments';
 import '../styles/global.css';
-
-const renderOutlineDetail = (data) => (
-  <div className="tp-outline-preview">
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{data}</ReactMarkdown>
-  </div>
-);
-
-const INTENT_LABELS = {
-  WRITING_TASK: '写作任务',
-  KNOWLEDGE_QA: '知识问答',
-  POLISH_TASK:  '润色任务',
-};
-
-const TYPE_LABELS = {
-  CREATE:   '创作',
-  CONTINUE: '续写',
-  POLISH:   '润色',
-};
-
-const intentLabel = (intent) => INTENT_LABELS[intent] || intent || '未知意图';
-const typeLabel = (type) => TYPE_LABELS[type] || type || '未知类型';
 
 const STAGE_CONFIG = {
   '任务启动': { label: '启动', color: '#6b7280', bg: '#f3f4f6' },
@@ -49,118 +28,8 @@ const parseStatusText = (text) => {
   return null;
 };
 
-const intentBadgeClass = (intent) => {
-  switch (intent) {
-    case 'WRITING_TASK': return 'tp-badge-intent-writing';
-    case 'KNOWLEDGE_QA': return 'tp-badge-intent-qa';
-    case 'POLISH_TASK': return 'tp-badge-intent-polish';
-    default: return 'tp-badge-intent-unknown';
-  }
-};
-
-const typeBadgeClass = (type) => {
-  switch (type) {
-    case 'CREATE': return 'tp-badge-type-create';
-    case 'CONTINUE': return 'tp-badge-type-continue';
-    case 'POLISH': return 'tp-badge-type-polish';
-    default: return 'tp-badge-type-default';
-  }
-};
-
-const renderIntentDetail = (data) => (
-  <div className="tp-intent-card">
-    <div className="tp-intent-badges">
-      <span className={`tp-badge ${intentBadgeClass(data['意图'])}`}>{intentLabel(data['意图'])}</span>
-      <span className={`tp-badge ${typeBadgeClass(data['写作类型'])}`}>{typeLabel(data['写作类型'])}</span>
-    </div>
-    {data['分析'] && (
-      <blockquote className="tp-feedback-quote">{data['分析']}</blockquote>
-    )}
-  </div>
-);
-
-const scoreColor = (score) => {
-  if (score >= 9) return '#059669';
-  if (score >= 7) return '#10b981';
-  if (score >= 5) return '#f59e0b';
-  return '#ef4444';
-};
-
-const verdictClass = (verdict) => {
-  if (verdict === 'PASS') return 'tp-verdict-pass';
-  if (verdict === 'REVISE_DRAFT') return 'tp-verdict-draft';
-  if (verdict === 'REVISE_POLISH') return 'tp-verdict-polish';
-  return '';
-};
-
-const verdictLabel = (verdict) => {
-  if (verdict === 'PASS') return '✓ 通过';
-  if (verdict === 'REVISE_DRAFT') return '✗ 需重新起草';
-  if (verdict === 'REVISE_POLISH') return '↻ 需再次润色';
-  return verdict;
-};
-
-const renderReviewDetail = (data) => {
-  const dimensions = ['结构', '内容', '语言', '逻辑', '相关性'].filter(k => data[k] != null);
-  return (
-    <div className="tp-review-card">
-      <div className="tp-score-header">
-        <span className="tp-score-label">综合评分</span>
-        <span className="tp-score-number" style={{ color: scoreColor(data['综合评分']) }}>
-          {data['综合评分']}<span className="tp-score-max">/10</span>
-        </span>
-        <span className={`tp-verdict-badge ${verdictClass(data['结论'])}`}>
-          {verdictLabel(data['结论'])}
-        </span>
-      </div>
-      {dimensions.length > 0 && (
-        <div className="tp-dimensions">
-          {dimensions.map(dim => (
-            <div key={dim} className="tp-dimension-row">
-              <span className="tp-dim-label">{dim}</span>
-              <div className="tp-dim-bar-bg">
-                <div
-                  className="tp-dim-bar-fill"
-                  style={{ width: `${(Number(data[dim]) / 10) * 100}%`, backgroundColor: scoreColor(data[dim]) }}
-                />
-              </div>
-              <span className="tp-dim-score" style={{ color: scoreColor(data[dim]) }}>{data[dim]}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {data['反馈意见'] && (
-        <blockquote className="tp-feedback-quote">{data['反馈意见']}</blockquote>
-      )}
-    </div>
-  );
-};
-
 const StreamingText = ({ text, isStreaming }) => {
-  const [displayed, setDisplayed] = useState('');
-
-  useEffect(() => {
-    if (!isStreaming) {
-      setDisplayed(text);
-      return;
-    }
-    let i = 0;
-    setDisplayed('');
-    const timer = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(timer);
-      }
-    }, 25);
-    return () => clearInterval(timer);
-  }, [text, isStreaming]);
-
-  return (
-    <span className={isStreaming ? 'streaming-text' : ''}>
-      {displayed}
-    </span>
-  );
+  return <span className={isStreaming ? 'streaming-text' : ''}>{text}</span>;
 };
 
 const StatusStageBadge = ({ stage }) => {
@@ -182,37 +51,13 @@ const StatusWithBadge = ({ text, streamDesc }) => {
       <StatusStageBadge stage={parsed.stage} />
       {parsed.description && (
         streamDesc ? (
-          <StreamingText text={parsed.description} isStreaming={true} />
+          <StreamingText text={parsed.description} isStreaming />
         ) : (
           <span className="status-desc">{parsed.description}</span>
         )
       )}
     </span>
   );
-};
-
-const renderStepData = (data) => {
-  if (data == null) return null;
-  if (typeof data === 'string') return data ? renderOutlineDetail(data) : null;
-  if (typeof data === 'object') {
-    if ('综合评分' in data || '结论' in data) return renderReviewDetail(data);
-    if ('意图' in data) return renderIntentDetail(data);
-    const entries = Object.entries(data).filter(([, v]) => v != null);
-    if (entries.length === 0) return null;
-    return (
-      <dl className="thinking-process-detail-kv">
-        {entries.map(([k, v]) => (
-          <div key={k} className="thinking-process-kv-row">
-            <dt>{k}</dt>
-            <dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  const str = String(data);
-  if (str === 'null' || str === 'undefined') return null;
-  return <span className="thinking-process-detail-text">{str}</span>;
 };
 
 const SourcesList = ({ sources }) => {
@@ -237,7 +82,7 @@ const SourcesList = ({ sources }) => {
         <span className="sources-count">{sources.length}</span>
         {hasMore && (
           <span className="sources-toggle">
-            {expanded ? '收起' : `展开全部`}
+            {expanded ? '收起' : '展开全部'}
           </span>
         )}
       </div>
@@ -257,8 +102,11 @@ const SourcesList = ({ sources }) => {
             {s.title && s.url && (
               <span className="source-domain">
                 {(() => {
-                  try { return new URL(s.url).hostname.replace(/^www\./, ''); }
-                  catch { return ''; }
+                  try {
+                    return new URL(s.url).hostname.replace(/^www\./, '');
+                  } catch {
+                    return '';
+                  }
                 })()}
               </span>
             )}
@@ -297,16 +145,11 @@ const getContentStreamStatus = (message) => {
 
 const MessageBubble = ({ message, onExport }) => {
   const isUser = message.role === 'user';
-  const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [viewerUrl, setViewerUrl] = useState(null);
   const thinkingSteps = message.thinkingSteps || [];
   const chainNodes = message.chainNodes || [];
   const traceEvents = message.traceEvents || [];
-  const hasTraceEvents = traceEvents.length > 0;
-  const hasChainNodes = chainNodes.length > 0;
-  const hasThinkingSteps = thinkingSteps.length > 0;
-  const hasThinking = hasTraceEvents || hasChainNodes || hasThinkingSteps;
-  const latestStep = hasThinkingSteps ? thinkingSteps[thinkingSteps.length - 1].text : '';
+  const hasThinking = traceEvents.length > 0 || chainNodes.length > 0 || thinkingSteps.length > 0;
   const contentStreamStatus = getContentStreamStatus(message);
   const canExport = !isUser && message.content && !message.isStreaming
     && (message.isFinalContent || !message.contentStage);
@@ -330,57 +173,18 @@ const MessageBubble = ({ message, onExport }) => {
             </div>
           </div>
         )}
-        {(hasTraceEvents || hasChainNodes) && (
+        {hasThinking && (
           <ThinkingPanel
             traceEvents={traceEvents}
             chainNodes={chainNodes}
+            thinkingSteps={thinkingSteps}
             isStreaming={message.isStreaming}
           />
-        )}
-        {!hasTraceEvents && !hasChainNodes && hasThinkingSteps && (
-          <div className="thinking-process">
-            <div
-              className="thinking-process-header"
-              onClick={() => setThinkingExpanded(!thinkingExpanded)}
-            >
-              <span className="thinking-process-arrow">
-                {thinkingExpanded ? '▲' : '▼'}
-              </span>
-              <span className="thinking-process-label">工作过程</span>
-              {!thinkingExpanded && (
-                <span className="thinking-process-latest">
-                  {(() => {
-                    const p = parseStatusText(latestStep);
-                    return p ? p.description || p.stage : latestStep;
-                  })()}
-                </span>
-              )}
-            </div>
-            {thinkingExpanded && (
-              <ol className="thinking-process-list">
-                {thinkingSteps.map((step, i) => {
-                  const isLast = i === thinkingSteps.length - 1;
-                  const showStream = isLast && message.isStreaming;
-                  return (
-                    <li key={i} className={`thinking-process-item ${isLast ? 'is-latest' : ''}`}>
-                      <span className="thinking-process-step-num">{i + 1}.</span>
-                      <div className="thinking-process-step-body">
-                        <span className="thinking-process-step-text">
-                          <StatusWithBadge text={step.text} streamDesc={showStream} />
-                        </span>
-                        {renderStepData(step.data)}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </div>
         )}
         {contentStreamStatus && (
           <div className={`content-stream-status ${contentStreamStatus.isRunning ? 'is-running' : ''} ${contentStreamStatus.isError ? 'is-error' : ''} ${contentStreamStatus.isFinal ? 'is-final' : ''}`}>
             <span className="content-stream-label">{contentStreamStatus.label}</span>
-            <span className="content-stream-separator">·</span>
+            <span className="content-stream-separator" aria-hidden="true">·</span>
             <span className="content-stream-text">{contentStreamStatus.mainText}</span>
           </div>
         )}

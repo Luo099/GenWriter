@@ -154,7 +154,10 @@ public class SupervisorNode implements NodeAction {
         ExecutionPlan plan;
         SessionContextHolder.set(sessionId, supervisorNodeId, "supervisor");
         try {
-            plan = generatePlan(state, accumulated);
+            plan = deterministicPlan(accumulated);
+            if (plan == null) {
+                plan = generatePlan(state, accumulated);
+            }
         } finally {
             SessionContextHolder.clear();
         }
@@ -260,10 +263,23 @@ public class SupervisorNode implements NodeAction {
             } catch (Exception e) {
                 log.error("[SupervisorNode] Worker 执行失败: name={}, error={}", workerName, e.getMessage(), e);
                 chainPublisher.publishError(sessionId, workerNodeId, e.getMessage());
-                publishStatus(sessionId, "步骤 " + displayName + " 执行异常，跳过继续...");
+                if (isCriticalWritingWorker(workerName)) {
+                    accumulated.put("workflowFailed", true);
+                    accumulated.put("failedWorker", workerName);
+                    accumulated.put("failureMessage", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+                    publishStatus(sessionId, "【明显提示】步骤 " + displayName + " 执行失败，已停止本轮创作；不会把旧稿保存为新章节。");
+                    break;
+                }
+                publishStatus(sessionId, "步骤 " + displayName + " 执行异常，已降级跳过并继续后续流程。");
                 planIndex++;
                 stepCounter++;
             }
+        }
+
+        if (Boolean.TRUE.equals(accumulated.get("workflowFailed"))) {
+            accumulated.put("finalOutput", "");
+            accumulated.put("currentNode", "SupervisorNode");
+            return accumulated;
         }
 
         String finalOutput = extractFinalOutput(accumulated);
@@ -327,6 +343,25 @@ public class SupervisorNode implements NodeAction {
             summary.put("outputLength", fo != null ? fo.length() : 0);
         }
         return summary;
+    }
+
+    private ExecutionPlan deterministicPlan(Map<String, Object> accumulated) {
+        String writingType = String.valueOf(accumulated.getOrDefault("writingType", "AUTO"));
+        return switch (writingType) {
+            case "CREATE" -> ExecutionPlan.of(
+                    List.of("intent_recognition", "outline", "draft", "polish", "review"),
+                    "Deterministic plan for explicit CREATE writing mode");
+            case "CONTINUE" -> ExecutionPlan.of(
+                    List.of("intent_recognition", "draft", "polish"),
+                    "Deterministic plan for explicit CONTINUE writing mode");
+            case "POLISH" -> ExecutionPlan.of(
+                    List.of("intent_recognition", "polish", "review"),
+                    "Deterministic plan for explicit POLISH writing mode");
+            case "KNOWLEDGE_QA" -> ExecutionPlan.of(
+                    List.of("intent_recognition", "direct_answer"),
+                    "Deterministic plan for explicit KNOWLEDGE_QA mode");
+            default -> null;
+        };
     }
 
     private ExecutionPlan generatePlan(OverAllState state, Map<String, Object> accumulated) {
@@ -478,12 +513,18 @@ public class SupervisorNode implements NodeAction {
         adjusted.add("outline");
         adjusted.add("draft");
         adjusted.add("polish");
-        adjusted.add("review");
+        if (!"CONTINUE".equalsIgnoreCase(String.valueOf(accumulated.getOrDefault("writingType", "")))) {
+            adjusted.add("review");
+        }
         return adjusted;
     }
 
     private boolean hasWritingSteps(List<String> steps) {
         return steps.stream().anyMatch(s -> "draft".equals(s) || "polish".equals(s) || "outline".equals(s));
+    }
+
+    private boolean isCriticalWritingWorker(String workerName) {
+        return "draft".equals(workerName) || "polish".equals(workerName) || "review".equals(workerName);
     }
 
     private boolean isFallingBackToResearch(Map<String, Object> accumulated, String finalOutput) {

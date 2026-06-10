@@ -5,6 +5,9 @@ import com.example.genwriter.sse.ChannelMessage;
 import com.example.genwriter.sse.SseMessageChannel;
 import com.example.genwriter.service.SseService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ public class SseServiceImpl implements SseService {
     private final ConcurrentMap<String, SseMessageChannel> channels = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @Override
     public void startRun(String sessionId) {
@@ -91,12 +95,22 @@ public class SseServiceImpl implements SseService {
 
     @Override
     public ChannelMessage publish(String sessionId, SseMessage message) {
+        long startNanos = System.nanoTime();
         // 获取或创建频道，确保消息被缓存
         SseMessageChannel channel = channels.computeIfAbsent(sessionId,
                 id -> new SseMessageChannel(id, objectMapper));
 
         // 发布消息到频道
         ChannelMessage channelMessage = channel.publish(message);
+        String type = message != null && message.getType() != null ? message.getType().name() : "unknown";
+        Counter.builder("genwriter_sse_messages_total")
+                .tag("type", type)
+                .register(meterRegistry)
+                .increment();
+        Timer.builder("genwriter_sse_publish_duration")
+                .tag("type", type)
+                .register(meterRegistry)
+                .record(System.nanoTime() - startNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
 
         log.debug("消息已发布：sessionId={}, seq={}, type={}",
                 sessionId, channelMessage.getSequenceId(), message.getType());

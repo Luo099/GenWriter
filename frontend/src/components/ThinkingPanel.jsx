@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import ChainNodeItem from './ChainNodeItem';
 import '../styles/global.css';
 
 const KIND_LABELS = {
@@ -13,15 +12,20 @@ const KIND_LABELS = {
   ERROR: '错误',
 };
 
-const KIND_STYLES = {
-  SUPERVISOR: { color: '#4b5563', bg: '#f3f4f6', border: '#e5e7eb' },
-  WORKER: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  LLM: { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  TOOL: { color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' },
-  RAG: { color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-  MEMORY: { color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-  STATUS: { color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-  ERROR: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+const LEGACY_NODE_KIND = {
+  PLANNING: 'SUPERVISOR',
+  THINKING: 'WORKER',
+  TOOL_CALL: 'TOOL',
+  EXECUTION: 'WORKER',
+  RESULT: 'STATUS',
+  ERROR: 'ERROR',
+};
+
+const LEGACY_STATUS_PHASE = {
+  STARTED: 'STARTED',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  ERROR: 'ERROR',
 };
 
 const PHASE_TO_STATUS = {
@@ -36,6 +40,15 @@ const formatDuration = (ms) => {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60000).toFixed(1)}m`;
+};
+
+const parseBracketStatus = (text) => {
+  if (!text || typeof text !== 'string') return null;
+  const match = text.match(/^【(.+?)】(.+)$/);
+  if (match) return { stage: match[1], description: match[2] };
+  const onlyStage = text.match(/^【(.+?)】$/);
+  if (onlyStage) return { stage: onlyStage[1], description: '' };
+  return null;
 };
 
 const formatValue = (value) => {
@@ -63,33 +76,18 @@ const formatValue = (value) => {
   return String(value);
 };
 
-const mergeTraceEvents = (events = []) => {
-  const bySpan = new Map();
-  events.forEach((event, index) => {
-    const spanId = event.spanId || event.eventId || `trace-${index}`;
-    const existing = bySpan.get(spanId) || {
-      spanId,
+const buildTree = (nodes = []) => {
+  const ordered = nodes
+    .filter(Boolean)
+    .map((node, index) => ({
+      ...node,
+      spanId: node.spanId || `trace-${index}`,
+      firstIndex: node.firstIndex ?? index,
       children: [],
-      firstIndex: index,
-    };
-    bySpan.set(spanId, {
-      ...existing,
-      ...event,
-      spanId,
-      parentSpanId: event.parentSpanId ?? existing.parentSpanId,
-      input: event.input ?? existing.input,
-      output: event.output ?? existing.output,
-      metadata: event.metadata ?? existing.metadata,
-      error: event.error ?? existing.error,
-      startedAt: event.startedAt ?? existing.startedAt,
-      endedAt: event.endedAt ?? existing.endedAt,
-      durationMs: event.durationMs ?? existing.durationMs,
-      latestIndex: index,
-    });
-  });
+    }))
+    .sort((a, b) => (a.firstIndex ?? 0) - (b.firstIndex ?? 0));
 
-  const nodes = Array.from(bySpan.values()).sort((a, b) => (a.firstIndex ?? 0) - (b.firstIndex ?? 0));
-  const nodeMap = new Map(nodes.map((node) => [node.spanId, { ...node, children: [] }]));
+  const nodeMap = new Map(ordered.map((node) => [node.spanId, node]));
   const roots = [];
 
   nodeMap.forEach((node) => {
@@ -102,8 +100,9 @@ const mergeTraceEvents = (events = []) => {
 
   const sortTree = (items) => {
     items.sort((a, b) => (a.firstIndex ?? 0) - (b.firstIndex ?? 0));
-    items.forEach((item) => sortTree(item.children));
+    items.forEach((item) => sortTree(item.children || []));
   };
+
   sortTree(roots);
   return roots;
 };
@@ -120,16 +119,105 @@ const flattenTrace = (nodes) => {
   return rows;
 };
 
+const mergeTraceEvents = (events = []) => {
+  const bySpan = new Map();
+  events.forEach((event, index) => {
+    const spanId = event.spanId || event.eventId || `trace-${index}`;
+    const existing = bySpan.get(spanId) || {
+      spanId,
+      firstIndex: index,
+    };
+
+    bySpan.set(spanId, {
+      ...existing,
+      ...event,
+      spanId,
+      parentSpanId: event.parentSpanId ?? existing.parentSpanId,
+      input: event.input ?? existing.input,
+      output: event.output ?? existing.output,
+      metadata: event.metadata ?? existing.metadata,
+      error: event.error ?? existing.error,
+      startedAt: event.startedAt ?? existing.startedAt,
+      endedAt: event.endedAt ?? existing.endedAt,
+      durationMs: event.durationMs ?? existing.durationMs,
+      toolName: event.toolName ?? event.metadata?.toolName ?? existing.toolName,
+      reasoningContent: event.reasoningContent ?? existing.reasoningContent,
+      firstIndex: existing.firstIndex,
+      latestIndex: index,
+    });
+  });
+
+  return buildTree(Array.from(bySpan.values()));
+};
+
+const summarizeLegacyOutput = (node) => {
+  if (!node || node.status !== 'COMPLETED') return null;
+  const output = node.output;
+  if (typeof output === 'string') return output || null;
+  if (!output || typeof output !== 'object') return null;
+
+  if (Array.isArray(output.steps) && output.steps.length > 0) {
+    return `计划执行: ${output.steps.join(' → ')}`;
+  }
+  if (output.searchRounds != null) {
+    const suffix = output.sourcesCount ? `，${output.sourcesCount} 个来源` : '';
+    return `执行 ${output.searchRounds} 次搜索${suffix}`;
+  }
+  if (output.draftLength != null) return `生成草稿 ${output.draftLength} 字`;
+  if (output.polishedLength != null) return `润色完成 ${output.polishedLength} 字`;
+  if (output.outlineLength != null) return `生成大纲 ${output.outlineLength} 字`;
+  if (output.outputLength != null) return `生成回答 ${output.outputLength} 字`;
+  if (output.length != null) return `${output.length} 字`;
+  if (typeof output.reasoning === 'string' && output.reasoning.trim()) return output.reasoning;
+  return null;
+};
+
+const normalizeChainNodes = (chainNodes = []) => buildTree(
+  chainNodes.map((node, index) => ({
+    spanId: node.nodeId || `legacy-${index}`,
+    parentSpanId: node.parentId || null,
+    kind: LEGACY_NODE_KIND[node.nodeType] || 'STATUS',
+    phase: LEGACY_STATUS_PHASE[node.status] || 'RUNNING',
+    name: node.nodeName || KIND_LABELS[LEGACY_NODE_KIND[node.nodeType] || 'STATUS'] || '执行步骤',
+    summary: summarizeLegacyOutput(node),
+    input: node.input,
+    output: node.output,
+    error: node.error,
+    durationMs: node.duration,
+    reasoningContent: node.reasoningContent,
+    firstIndex: index,
+  }))
+);
+
+const normalizeThinkingSteps = (thinkingSteps = [], isStreaming = false) => buildTree(
+  thinkingSteps.map((step, index) => {
+    const parsed = parseBracketStatus(step?.text);
+    const isLatest = index === thinkingSteps.length - 1;
+    return {
+      spanId: `step-${index}`,
+      kind: 'STATUS',
+      phase: isStreaming && isLatest ? 'RUNNING' : 'COMPLETED',
+      name: parsed?.stage || '状态更新',
+      summary: parsed?.description || step?.text || '处理中',
+      output: step?.data ?? null,
+      firstIndex: index,
+    };
+  })
+);
+
 const TraceNodeItem = ({ node, depth = 0 }) => {
   const [expanded, setExpanded] = useState(depth < 1);
   const status = PHASE_TO_STATUS[node.phase] || 'RUNNING';
+  const statusClass = status.toLowerCase();
   const hasChildren = node.children && node.children.length > 0;
-  const hasDetails = node.input || node.output || node.metadata || node.error;
+  const hasDetails = node.input || node.output || node.metadata || node.error || node.reasoningContent;
   const isRunning = status === 'STARTED' || status === 'RUNNING';
 
   return (
-    <div className={`trace-node trace-node-depth-${Math.min(depth, 4)} trace-node-${status.toLowerCase()}`}>
-      <div className="trace-node-main" style={{ paddingLeft: `${depth * 18}px` }}>
+    <div
+      className={`trace-node trace-node-depth-${Math.min(depth, 4)} trace-node-status-${statusClass} ${isRunning ? 'trace-node-running' : ''}`}
+    >
+      <div className="trace-node-main" style={{ marginLeft: `${depth * 18}px` }}>
         <button
           className="trace-node-expander"
           onClick={() => setExpanded(!expanded)}
@@ -138,23 +226,21 @@ const TraceNodeItem = ({ node, depth = 0 }) => {
         >
           {(hasChildren || hasDetails) ? (expanded ? '▾' : '▸') : ''}
         </button>
-        <span
-          className={`trace-node-status-indicator trace-node-status-${status.toLowerCase()}`}
-        />
         <div className="trace-node-body">
           <div className="trace-node-title-row">
             <span className="trace-node-title">{node.name || KIND_LABELS[node.kind] || '执行步骤'}</span>
-            {node.toolName && <span className="trace-node-chip">{node.toolName}</span>}
             {node.durationMs != null && node.durationMs > 0 && (
               <span className="trace-node-duration">{formatDuration(node.durationMs)}</span>
             )}
           </div>
-          {node.summary && <div className="trace-node-summary">{node.summary}</div>}
+          {node.summary && node.summary !== node.name && (
+            <div className="trace-node-summary">{node.summary}</div>
+          )}
         </div>
       </div>
 
       {expanded && hasDetails && (
-        <div className="trace-node-details" style={{ marginLeft: `${depth * 18 + 22}px` }}>
+        <div className="trace-node-details" style={{ marginLeft: `${depth * 18 + 30}px` }}>
           {node.error && (
             <div className="trace-detail-section trace-detail-error">
               <span className="trace-detail-label">错误</span>
@@ -179,6 +265,12 @@ const TraceNodeItem = ({ node, depth = 0 }) => {
               <div className="trace-detail-body">{formatValue(node.metadata)}</div>
             </div>
           )}
+          {node.reasoningContent && (
+            <div className="trace-detail-section">
+              <span className="trace-detail-label">模型思考</span>
+              <div className="trace-detail-body trace-detail-reasoning">{node.reasoningContent}</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -193,52 +285,27 @@ const TraceNodeItem = ({ node, depth = 0 }) => {
   );
 };
 
-const LegacyChainPanel = ({ chainNodes, isStreaming }) => {
-  const completedCount = chainNodes.filter((n) => n.status === 'COMPLETED').length;
-  const errorCount = chainNodes.filter((n) => n.status === 'ERROR').length;
-  const runningCount = chainNodes.filter((n) => n.status === 'STARTED' || n.status === 'RUNNING').length;
-
-  return (
-    <>
-      <div className="thinking-panel-stats">
-        {isStreaming && runningCount > 0 ? '运行中' : `${completedCount} 步完成`}
-        {errorCount > 0 && ` · ${errorCount} 错误`}
-      </div>
-      {chainNodes.map((node, index) => (
-        <ChainNodeItem
-          key={node.nodeId || index}
-          node={node}
-          isLast={index === chainNodes.length - 1}
-        />
-      ))}
-    </>
-  );
-};
-
-const ThinkingPanel = ({ traceEvents = [], chainNodes = [], isStreaming }) => {
+const ThinkingPanel = ({ traceEvents = [], chainNodes = [], thinkingSteps = [], isStreaming }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [filter, setFilter] = useState('ALL');
   const contentRef = useRef(null);
 
-  const traceTree = useMemo(() => mergeTraceEvents(traceEvents), [traceEvents]);
-  const flatTrace = useMemo(() => flattenTrace(traceTree), [traceTree]);
-  const hasTrace = flatTrace.length > 0;
-  const hasLegacy = chainNodes.length > 0;
-  const hasNodes = hasTrace || hasLegacy;
+  const sourceMode = traceEvents.length > 0
+    ? 'trace'
+    : chainNodes.length > 0
+      ? 'legacy'
+      : thinkingSteps.length > 0
+        ? 'steps'
+        : 'empty';
 
-  const filteredTree = useMemo(() => {
-    if (filter === 'ALL') return traceTree;
-    const keepTree = (nodes) => nodes
-      .map((node) => {
-        const children = keepTree(node.children || []);
-        const keepSelf = filter === 'ERROR' ? node.phase === 'ERROR' || node.kind === 'ERROR' : node.kind === filter;
-        if (keepSelf || children.length > 0) return { ...node, children };
-        return null;
-      })
-      .filter(Boolean);
-    return keepTree(traceTree);
-  }, [filter, traceTree]);
+  const traceTree = useMemo(() => {
+    if (sourceMode === 'trace') return mergeTraceEvents(traceEvents);
+    if (sourceMode === 'legacy') return normalizeChainNodes(chainNodes);
+    if (sourceMode === 'steps') return normalizeThinkingSteps(thinkingSteps, isStreaming);
+    return [];
+  }, [sourceMode, traceEvents, chainNodes, thinkingSteps, isStreaming]);
+
+  const flatTrace = useMemo(() => flattenTrace(traceTree), [traceTree]);
 
   const stats = useMemo(() => {
     const completed = flatTrace.filter((n) => n.phase === 'COMPLETED').length;
@@ -252,39 +319,44 @@ const ThinkingPanel = ({ traceEvents = [], chainNodes = [], isStreaming }) => {
     if (contentRef.current && isExpanded && !isCollapsed) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
-  }, [traceEvents, chainNodes, isExpanded, isCollapsed]);
+  }, [traceEvents, chainNodes, thinkingSteps, isExpanded, isCollapsed]);
 
-  if (!hasNodes) return null;
+  if (flatTrace.length === 0) return null;
 
-  const latest = hasTrace ? flatTrace[flatTrace.length - 1] : chainNodes[chainNodes.length - 1];
-  const latestStatusText = hasTrace
-    ? `${latest?.name || '执行中'}${latest?.phase === 'COMPLETED' ? ' 已完成' : latest?.phase === 'ERROR' ? ' 失败' : '...'}`
-    : `${latest?.nodeName || ''}${latest?.status === 'COMPLETED' ? ' 已完成' : latest?.status === 'ERROR' ? ' 失败' : '...'}`;
+  const latest = flatTrace[flatTrace.length - 1];
+  const latestBaseText = latest?.summary || latest?.name || '执行中';
+  const latestStatusText = latest?.phase === 'COMPLETED'
+    ? `${latestBaseText} 已完成`
+    : latest?.phase === 'ERROR'
+      ? `${latestBaseText} 失败`
+      : `${latestBaseText}...`;
+  const statItems = [
+    `${stats.completed} 步完成`,
+    ...(stats.tools > 0 ? [`${stats.tools} 次工具`] : []),
+    ...(stats.errors > 0 ? [`${stats.errors} 错误`] : []),
+  ];
 
   return (
     <div className={`thinking-panel trace-panel ${isCollapsed ? 'thinking-panel-collapsed' : ''}`}>
       <div className="thinking-panel-header" onClick={() => setIsCollapsed(!isCollapsed)}>
         <div className="thinking-panel-header-left">
-          <span className="thinking-panel-arrow">{isCollapsed ? '▶' : '▼'}</span>
+          <span className="thinking-panel-arrow">{isCollapsed ? '▸' : '▾'}</span>
           <span className="thinking-panel-title">执行轨迹</span>
           {isCollapsed && (
             <span className="thinking-panel-collapsed-summary">{latestStatusText}</span>
           )}
           {!isCollapsed && isStreaming && stats.running > 0 && (
             <span className="thinking-panel-live-badge">
-              <span className="thinking-panel-live-dot" />
               运行中
             </span>
           )}
-          {!isCollapsed && hasTrace && (
+          {!isCollapsed && (
             <span className="thinking-panel-stats">
-              {stats.completed} 步完成
-              {stats.tools > 0 && ` · ${stats.tools} 次工具`}
-              {stats.errors > 0 && ` · ${stats.errors} 错误`}
+              {statItems.join(' · ')}
             </span>
           )}
         </div>
-        {!isCollapsed && hasTrace && flatTrace.length > 2 && (
+        {!isCollapsed && flatTrace.length > 2 && (
           <button
             className="thinking-panel-toggle-btn"
             onClick={(e) => {
@@ -297,49 +369,18 @@ const ThinkingPanel = ({ traceEvents = [], chainNodes = [], isStreaming }) => {
         )}
       </div>
 
-      {!isCollapsed && hasTrace && (
-        <div className="trace-filter-row" onClick={(e) => e.stopPropagation()}>
-          {[
-            ['ALL', '全部'],
-            ['WORKER', '智能体'],
-            ['LLM', '模型'],
-            ['TOOL', '工具'],
-            ['ERROR', '错误'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={`trace-filter-btn ${filter === value ? 'active' : ''}`}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {!isCollapsed && (
         <div
           className={`thinking-panel-content ${isExpanded ? '' : 'thinking-panel-content-compact'}`}
           ref={contentRef}
+          style={{ paddingTop: 0 }}
         >
-          {hasTrace ? (
-            filteredTree.length > 0 ? (
-              filteredTree.map((node) => (
-                <TraceNodeItem key={node.spanId || node.eventId} node={node} />
-              ))
-            ) : (
-              <div className="trace-empty">当前筛选下暂无轨迹事件</div>
-            )
-          ) : (
-            <LegacyChainPanel chainNodes={chainNodes} isStreaming={isStreaming} />
-          )}
-          {isStreaming && ((hasTrace && stats.running > 0) || (!hasTrace && hasLegacy)) && (
+          {traceTree.map((node) => (
+            <TraceNodeItem key={node.spanId || node.eventId} node={node} />
+          ))}
+          {isStreaming && stats.running > 0 && (
             <div className="thinking-panel-loading">
-              <div className="thinking-panel-loading-dots">
-                <span />
-                <span />
-                <span />
-              </div>
+              <span className="thinking-panel-loading-line" aria-hidden="true" />
             </div>
           )}
         </div>

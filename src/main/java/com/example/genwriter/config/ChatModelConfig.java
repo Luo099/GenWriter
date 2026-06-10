@@ -1,6 +1,7 @@
 package com.example.genwriter.config;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -27,6 +28,7 @@ public class ChatModelConfig {
 
     private final LLMConfig llmConfig;
     private final ChatModelFactory chatModelFactory;
+    private final MeterRegistry meterRegistry;
 
     /**
      * 自定义 RestClient.Builder，设置 15 分钟读取超时
@@ -53,12 +55,15 @@ public class ChatModelConfig {
     @Bean
     @Primary
     public DynamicChatModel dynamicChatModel(
-            @Qualifier("dashscopeChatModel") ChatModel dashScopeChatModel) {
-        DynamicChatModel dynamicModel = new DynamicChatModel(llmConfig.getDefaultModel());
+            @Qualifier("dashscopeChatModel") org.springframework.beans.factory.ObjectProvider<ChatModel> dashScopeChatModelProvider) {
+        DynamicChatModel dynamicModel = new DynamicChatModel(llmConfig.getDefaultModel(), meterRegistry);
+        ChatModel dashScopeChatModel = dashScopeChatModelProvider.getIfAvailable();
 
         // 始终注册自动配置的 DashScope 作为兜底
-        dynamicModel.registerModel("dashscope", dashScopeChatModel);
-        dynamicModel.registerModel(llmConfig.getDefaultModel(), dashScopeChatModel);
+        if (dashScopeChatModel != null) {
+            dynamicModel.registerModel("dashscope", dashScopeChatModel);
+            dynamicModel.registerModel(llmConfig.getDefaultModel(), dashScopeChatModel);
+        }
 
         // 从 YAML providers 列表加载所有供应商
         List<LLMConfig.ProviderConfig> providers = llmConfig.getProviders();

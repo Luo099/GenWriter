@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import * as knowledgeChunksApi from '../api/knowledgeChunks';
 import * as ragApi from '../api/rag';
+import ConfirmDialog from './ConfirmDialog';
 import '../styles/global.css';
 
 const STRATEGY_MAP = {
@@ -21,6 +22,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [confirmState, setConfirmState] = useState({ open: false });
 
   const fetchChunks = useCallback(async () => {
     setLoading(true);
@@ -94,24 +96,38 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
     }
   };
 
-  const handleDeleteChunk = async (chunkId) => {
-    if (!window.confirm('确定要删除这个知识片段吗？')) return;
-    try {
-      await knowledgeChunksApi.deleteChunk(chunkId);
-      fetchChunks();
-    } catch (e) {
-      setError(e.message);
-    }
+  const handleDeleteChunk = (chunkId) => {
+    setConfirmState({
+      open: true,
+      title: '删除知识片段',
+      message: '确定要删除这个知识片段吗？此操作无法撤销。',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await knowledgeChunksApi.deleteChunk(chunkId);
+          fetchChunks();
+        } catch (e) {
+          setError(e.message);
+        }
+      },
+    });
   };
 
-  const handleClearAll = async () => {
-    if (!window.confirm(`确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`)) return;
-    try {
-      await knowledgeChunksApi.deleteChunksByKnowledgeBase(kbId);
-      fetchChunks();
-    } catch (e) {
-      setError(e.message);
-    }
+  const handleClearAll = () => {
+    setConfirmState({
+      open: true,
+      title: '清空知识片段',
+      message: `确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await knowledgeChunksApi.deleteChunksByKnowledgeBase(kbId);
+          fetchChunks();
+        } catch (e) {
+          setError(e.message);
+        }
+      },
+    });
   };
 
   return (
@@ -269,6 +285,11 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => setConfirmState({ open: false })}
+      />
     </div>
   );
 };

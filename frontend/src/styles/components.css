@@ -570,6 +570,42 @@
   margin-bottom: 40px;
 }
 
+.welcome-guides {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.welcome-guide-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  text-align: center;
+}
+
+.welcome-guide-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.welcome-guide-card strong {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.welcome-guide-card span {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
 .suggestions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, MessageSquare, BookOpen, PenLine } from 'lucide-react';
 import '../styles/global.css';
 
 const greetings = [
   '你好，我是 GenWriter',
-  '嗨，我是你的 AI 写作助手',
+  '嗨，开始今天的写作',
   '你好，我是 GenWriter',
-  '嗨，我是 GenWriter',
-  '你好，很高兴见到你',
+  '准备好了，随时开始',
 ];
 
 const subtitles = [
-  '你的 AI 写作助手。',
-  '随时为你效劳。',
-  '我们马上开始吧。',
-  '专注创作，其余交给我。',
+  '写作助手，帮你从想法到成稿。',
+  '从想法到成稿，一步到位。',
+  '写作助手，帮你从想法到成稿。',
+  '从想法到成稿，一步到位。',
+];
+
+const guides = [
+  { icon: MessageSquare, label: '开始对话', hint: '描述你的写作需求' },
+  { icon: BookOpen, label: '导入知识', hint: '上传参考资料辅助写作' },
+  { icon: PenLine, label: '写作工作台', hint: '在编辑器中精修文稿' },
 ];
 
 const WelcomeScreen = ({ onSuggestionClick }) => {
@@ -35,7 +40,19 @@ const WelcomeScreen = ({ onSuggestionClick }) => {
         </div>
         <h2 className="welcome-title">{greeting}</h2>
         <p className="welcome-subtitle">{subtitle}</p>
-
+        <div className="welcome-guides">
+          {guides.map((g) => (
+            <button
+              key={g.label}
+              className="welcome-guide-card"
+              onClick={() => onSuggestionClick?.(g.label)}
+            >
+              <g.icon size={22} strokeWidth={1.8} />
+              <strong>{g.label}</strong>
+              <span>{g.hint}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

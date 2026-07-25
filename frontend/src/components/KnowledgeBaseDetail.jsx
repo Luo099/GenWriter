@@ -4,6 +4,7 @@ import * as knowledgeBasesApi from '../api/knowledgeBases';
 import * as knowledgeChunksApi from '../api/knowledgeChunks';
 import * as ragApi from '../api/rag';
 import '../styles/global.css';
+import { ChevronLeft, Trash2, Upload } from 'lucide-react';
 
 const STRATEGY_MAP = {
   recursive: '递归分块',
@@ -121,9 +122,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
       <div className="memory-panel-header">
         <div className="memory-panel-header-left">
           <button className="memory-back-btn" onClick={onBack} title="返回">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
+            <ChevronLeft size={18} strokeWidth={2} />
           </button>
           <h2 className="memory-panel-title">
             {knowledgeBase?.name || '知识库详情'}
@@ -132,10 +131,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
         </div>
         {chunks.length > 0 && (
           <button className="memory-new-btn" onClick={handleClearAll} style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
+            <Trash2 size={16} strokeWidth={2} />
             清空片段
           </button>
         )}
@@ -166,11 +162,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
               gap: 6,
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+            <Upload size={16} strokeWidth={2} />
             {selectedFile ? selectedFile.name : '选择文件'}
           </label>
 
@@ -198,11 +190,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
+                <Upload size={16} strokeWidth={2} />
                 上传文档
               </>
             )}
@@ -260,10 +248,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
                     onClick={() => handleDeleteChunk(chunk.id)}
                     title="删除"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+                    <Trash2 size={14} strokeWidth={2} />
                   </button>
                 </div>
               </div>

@@ -19,6 +19,7 @@ import {
   Heading1,
   Heading2,
   Italic,
+  Link as LinkIcon,
   List,
   ListOrdered,
   Quote,
@@ -252,7 +253,7 @@ const RichMarkdownEditor = ({
             <Quote size={15} />
           </ToolbarButton>
           <ToolbarButton title="链接" active={editor?.isActive('link')} disabled={!editor || disabled} onClick={setLink}>
-            🔗
+            <LinkIcon size={15} />
           </ToolbarButton>
           <ToolbarButton title="表格" disabled={!editor || disabled} onClick={insertTable}>
             <Table2 size={15} />

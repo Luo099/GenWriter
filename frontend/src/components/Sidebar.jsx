@@ -1,45 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
+import { MessageSquare, BookOpen, PieChart, PenLine, Wrench, Settings, Plus, Folder, Trash2, Check, ChevronDown } from 'lucide-react';
 import '../styles/global.css';
 
 const navItems = [
-  { key: 'chat', label: '对话', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-  )},
-  { key: 'knowledge-bases', label: '知识库', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-    </svg>
-  )},
-  { key: 'memories', label: '记忆', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-      <path d="M12 2a10 10 0 0 1 10 10"></path>
-      <path d="M20.2 7.2A10 10 0 0 0 12 2v10"></path>
-    </svg>
-  )},
-  { key: 'writing-skills', label: '风格学习', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-      <path d="M12 2a10 10 0 0 1 10 10"></path>
-      <path d="M20.2 7.2A10 10 0 0 0 12 2v10"></path>
-      <path d="M12 12l-4 4"></path>
-      <path d="M12 12l4 4"></path>
-    </svg>
-  )},
-  { key: 'skills', label: '技能管理', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-    </svg>
-  )},
-  { key: 'settings', label: '设置', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-    </svg>
-  )},
+  { key: 'chat', label: '对话', icon: <MessageSquare size={16} strokeWidth={2} /> },
+  { key: 'knowledge-bases', label: '知识库', icon: <BookOpen size={16} strokeWidth={2} /> },
+  { key: 'memories', label: '记忆', icon: <PieChart size={16} strokeWidth={2} /> },
+  { key: 'writing-skills', label: '风格学习', icon: <PenLine size={16} strokeWidth={2} /> },
+  { key: 'skills', label: '技能管理', icon: <Wrench size={16} strokeWidth={2} /> },
+  { key: 'settings', label: '设置', icon: <Settings size={16} strokeWidth={2} /> },
 ];
 
 const Sidebar = ({
@@ -183,10 +152,7 @@ const Sidebar = ({
     <aside className="sidebar">
       <div className="sidebar-header">
         <button className="new-chat-btn" onClick={onNewChat}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+          <Plus size={18} strokeWidth={2} />
           新对话
         </button>
       </div>
@@ -196,10 +162,7 @@ const Sidebar = ({
           <div className="project-section-header">
             <span className="section-label">项目</span>
             <button className="section-action-btn" onClick={onNewProject} title="新建项目">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
+              <Plus size={14} strokeWidth={2} />
             </button>
           </div>
           <div className="project-list">
@@ -210,9 +173,7 @@ const Sidebar = ({
                 onClick={() => onSelectProject(project)}
                 onMouseLeave={() => setConfirmDeleteProjectId(null)}
               >
-                <svg className="project-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
+                <Folder size={16} strokeWidth={2} className="project-icon" />
                 {editingProjectId === project.id ? (
                   <input
                     ref={projectInputRef}
@@ -238,16 +199,11 @@ const Sidebar = ({
                   onClick={(e) => handleDeleteProjectClick(e, project)}
                   title={confirmDeleteProjectId === project.id ? '再次点击确认删除' : '删除项目'}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    {confirmDeleteProjectId === project.id ? (
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    ) : (
-                      <>
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </>
-                    )}
-                  </svg>
+                  {confirmDeleteProjectId === project.id ? (
+                    <Check size={12} strokeWidth={2} />
+                  ) : (
+                    <Trash2 size={12} strokeWidth={2} />
+                  )}
                 </button>
               </div>
             ))}
@@ -272,9 +228,7 @@ const Sidebar = ({
                   setConfirmDeleteId(null);
                 }}
               >
-                <svg className="session-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
+                <MessageSquare size={16} strokeWidth={2} className="session-icon" />
                 {editingSessionId === session.id ? (
                   <input
                     ref={sessionInputRef}
@@ -300,16 +254,11 @@ const Sidebar = ({
                     onClick={(e) => handleDeleteClick(e, session)}
                     title={confirmDeleteId === session.id ? '再次点击确认删除' : '删除对话'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {confirmDeleteId === session.id ? (
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      ) : (
-                        <>
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </>
-                      )}
-                    </svg>
+                    {confirmDeleteId === session.id ? (
+                      <Check size={14} strokeWidth={2} />
+                    ) : (
+                      <Trash2 size={14} strokeWidth={2} />
+                    )}
                   </button>
                 )}
               </div>
@@ -325,17 +274,11 @@ const Sidebar = ({
         >
           <div className="user-avatar">U</div>
           <span className="user-name">用户</span>
-          <svg
+          <ChevronDown
+            size={14}
+            strokeWidth={2}
             className={`user-menu-arrow ${isUserMenuOpen ? 'open' : ''}`}
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+          />
         </div>
         {isUserMenuOpen && (
           <div className="user-dropdown-menu">

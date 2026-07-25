@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Check, X, RefreshCw, ChevronUp, ChevronDown, Link as LinkIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkingPanel from './ThinkingPanel';
@@ -94,9 +95,9 @@ const verdictClass = (verdict) => {
 };
 
 const verdictLabel = (verdict) => {
-  if (verdict === 'PASS') return '✓ 通过';
-  if (verdict === 'REVISE_DRAFT') return '✗ 需重新起草';
-  if (verdict === 'REVISE_POLISH') return '↻ 需再次润色';
+  if (verdict === 'PASS') return <><Check size={12} strokeWidth={2} /> 通过</>;
+  if (verdict === 'REVISE_DRAFT') return <><X size={12} strokeWidth={2} /> 需重新起草</>;
+  if (verdict === 'REVISE_POLISH') return <><RefreshCw size={12} strokeWidth={2} /> 需再次润色</>;
   return verdict;
 };
 
@@ -227,11 +228,7 @@ const SourcesList = ({ sources }) => {
         onClick={() => setExpanded(!expanded)}
       >
         <span className="sources-icon">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <path d="M6.5 3H3.5C2.67 3 2 3.67 2 4.5V7.5C2 8.33 2.67 9 3.5 9H6.5C7.33 9 8 8.33 8 7.5V4.5C8 3.67 7.33 3 6.5 3Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9.5 7H12.5C13.33 7 14 7.67 14 8.5V11.5C14 12.33 13.33 13 12.5 13H9.5C8.67 13 8 12.33 8 11.5V8.5C8 7.67 8.67 7 9.5 7Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M14 4.5L8 11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
+          <LinkIcon size={12} strokeWidth={1.2} />
         </span>
         <span className="sources-title">参考来源</span>
         <span className="sources-count">{sources.length}</span>
@@ -344,7 +341,7 @@ const MessageBubble = ({ message, onExport }) => {
               onClick={() => setThinkingExpanded(!thinkingExpanded)}
             >
               <span className="thinking-process-arrow">
-                {thinkingExpanded ? '▲' : '▼'}
+                {thinkingExpanded ? <ChevronUp size={12} strokeWidth={2} /> : <ChevronDown size={12} strokeWidth={2} />}
               </span>
               <span className="thinking-process-label">工作过程</span>
               {!thinkingExpanded && (

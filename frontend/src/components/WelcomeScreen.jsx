@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Layers } from 'lucide-react';
 import '../styles/global.css';
 
 const greetings = [
@@ -30,11 +31,7 @@ const WelcomeScreen = ({ onSuggestionClick }) => {
     <div className="welcome-screen">
       <div className="welcome-content">
         <div className="welcome-logo">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" strokeWidth="1.5">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-            <path d="M2 17l10 5 10-5"></path>
-            <path d="M2 12l10 5 10-5"></path>
-          </svg>
+          <Layers size={48} strokeWidth={1.5} color="var(--accent-color)" />
         </div>
         <h1 className="welcome-title">{greeting}</h1>
         <p className="welcome-subtitle">{subtitle}</p>

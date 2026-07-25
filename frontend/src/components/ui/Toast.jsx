@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 const ToastContext = createContext(null);
 
@@ -23,7 +23,7 @@ export function ToastProvider({ children }) {
     [remove],
   );
 
-  const api = useRef({ push, remove }).current;
+  const api = useMemo(() => ({ push, remove }), [push, remove]);
 
   return (
     <ToastContext.Provider value={api}>

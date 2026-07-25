@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as memoriesApi from '../api/memories';
 import '../styles/global.css';
 
@@ -30,6 +31,7 @@ const IMPORTANCE_LABEL = {
 };
 
 const MemoryPanel = ({ projectId, onBack }) => {
+  const confirm = useConfirm();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -174,7 +176,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('确定要删除这条记忆吗？')) return;
+    if (!await confirm('确定要删除这条记忆吗？')) return;
     setDeletingId(id);
     try {
       await memoriesApi.deleteMemory(id);
@@ -188,7 +190,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`确定要删除选中的 ${selectedIds.size} 条记忆吗？`)) return;
+    if (!await confirm(`确定要删除选中的 ${selectedIds.size} 条记忆吗？`)) return;
     try {
       await memoriesApi.batchDeleteMemories(Array.from(selectedIds));
       fetchMemories();

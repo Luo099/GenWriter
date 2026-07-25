@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import * as knowledgeChunksApi from '../api/knowledgeChunks';
 import * as ragApi from '../api/rag';
@@ -11,6 +12,7 @@ const STRATEGY_MAP = {
 };
 
 const KnowledgeBaseDetail = ({ kbId, onBack }) => {
+  const confirm = useConfirm();
   const [knowledgeBase, setKnowledgeBase] = useState(null);
   const [chunks, setChunks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
   };
 
   const handleDeleteChunk = async (chunkId) => {
-    if (!window.confirm('确定要删除这个知识片段吗？')) return;
+    if (!await confirm('确定要删除这个知识片段吗？')) return;
     try {
       await knowledgeChunksApi.deleteChunk(chunkId);
       fetchChunks();
@@ -105,7 +107,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm(`确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`)) return;
+    if (!await confirm(`确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`)) return;
     try {
       await knowledgeChunksApi.deleteChunksByKnowledgeBase(kbId);
       fetchChunks();

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import AttachmentPreview from './AttachmentPreview';
+import { useToast } from './ui/Toast';
 import { uploadAttachment, deleteAttachment, getThumbnailUrl } from '../api/attachments';
 import '../styles/global.css';
 
@@ -18,6 +19,7 @@ const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
 const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) => {
+  const { push: pushToast } = useToast();
   const [inputValue, setInputValue] = useState('');
   const [mode, setMode] = useState('AUTO');
   const [webSearch, setWebSearch] = useState(true);
@@ -54,11 +56,11 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
     if (attachments.length + files.length > MAX_ATTACHMENTS) {
-      alert(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`);
+      pushToast(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`, 'warning');
       return;
     }
     if (!sessionId) {
-      alert('请先创建会话');
+      pushToast('请先创建会话', 'warning');
       return;
     }
 
@@ -68,7 +70,7 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
     for (const file of files) {
       const error = validateFile(file);
       if (error) {
-        alert(`${file.name}: ${error}`);
+        pushToast(`${file.name}: ${error}`, 'error');
         continue;
       }
 

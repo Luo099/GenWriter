@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import KnowledgeBaseDetail from './KnowledgeBaseDetail';
 import '../styles/global.css';
@@ -10,6 +11,7 @@ const KB_TYPE_MAP = {
 };
 
 const KnowledgeBasePanel = ({ onBack }) => {
+  const confirm = useConfirm();
   const [knowledgeBases, setKnowledgeBases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -126,7 +128,7 @@ const KnowledgeBasePanel = ({ onBack }) => {
   };
 
   const handleDelete = async (kb) => {
-    if (!window.confirm(`确定要删除知识库"${kb.name}"吗？`)) return;
+    if (!await confirm(`确定要删除知识库"${kb.name}"吗？`)) return;
     try {
       await knowledgeBasesApi.deleteKnowledgeBase(kb.id);
       fetchKnowledgeBases();

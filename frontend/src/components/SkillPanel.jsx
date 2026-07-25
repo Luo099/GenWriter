@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import * as skillsApi from '../api/skills';
@@ -88,6 +89,7 @@ const GuidanceBar = ({ children }) => (
 );
 
 const SkillPanel = ({ onBack }) => {
+  const confirm = useConfirm();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -311,7 +313,7 @@ const SkillPanel = ({ onBack }) => {
   };
 
   const handleDelete = async (skill) => {
-    if (!window.confirm(`确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`)) {
+    if (!await confirm(`确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`)) {
       return;
     }
     try {

@@ -320,7 +320,7 @@ function App() {
         if (!project) {
           const createdProject = await projectsApi.createProject({
             name: '默认项目',
-            description: '系统默认项目,用于组织您的写作会话',
+            description: '系统默认项目，用于组织您的写作会话',
           });
           setProjects([createdProject]);
           setActiveProject(createdProject);

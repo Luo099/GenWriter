@@ -386,7 +386,7 @@ const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh,
   return (
     <aside className="writing-workbench">
       <div className="workbench-header">
-        <h2>版本工作台</h2>
+        <h2 className="panel-title">版本工作台</h2>
         <div className="workbench-header-actions">
           <button
             className="workbench-icon-btn"

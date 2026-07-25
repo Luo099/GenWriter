@@ -113,7 +113,7 @@ const SettingsPanel = () => {
     <div className="settings-panel">
       <div className="settings-header">
         <div className="settings-header-left">
-          <h1 className="settings-title">系统设置</h1>
+          <h2 className="settings-title">系统设置</h2>
         </div>
       </div>
 

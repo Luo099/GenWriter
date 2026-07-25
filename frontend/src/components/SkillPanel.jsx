@@ -69,7 +69,7 @@ const buildFrontmatterPreview = (formData, tags) => {
 
 const MarkdownPreview = ({ content }) => {
   if (!content || !content.trim()) {
-    return <div className="skill-preview-empty">Nothing to preview</div>;
+    return <div className="skill-preview-empty">暂无预览内容</div>;
   }
   return (
     <div className="skill-md-preview">

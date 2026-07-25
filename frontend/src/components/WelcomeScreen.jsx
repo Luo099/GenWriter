@@ -33,7 +33,7 @@ const WelcomeScreen = ({ onSuggestionClick }) => {
         <div className="welcome-logo">
           <Layers size={48} strokeWidth={1.5} color="var(--accent-color)" />
         </div>
-        <h1 className="welcome-title">{greeting}</h1>
+        <h2 className="welcome-title">{greeting}</h2>
         <p className="welcome-subtitle">{subtitle}</p>
 
       </div>

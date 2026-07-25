@@ -29,16 +29,16 @@ const intentLabel = (intent) => INTENT_LABELS[intent] || intent || '未知意图
 const typeLabel = (type) => TYPE_LABELS[type] || type || '未知类型';
 
 const STAGE_CONFIG = {
-  '任务启动': { label: '启动', color: '#6b7280', bg: '#f3f4f6' },
-  '意图识别': { label: '意图识别', color: '#6b7280', bg: '#f3f4f6' },
-  '知识库检索': { label: '知识检索', color: '#6b7280', bg: '#f3f4f6' },
-  '大纲生成': { label: '大纲生成', color: '#6b7280', bg: '#f3f4f6' },
-  '正文写作': { label: '正文写作', color: '#6b7280', bg: '#f3f4f6' },
-  '内容评审': { label: '内容评审', color: '#6b7280', bg: '#f3f4f6' },
-  '润色': { label: '润色', color: '#6b7280', bg: '#f3f4f6' },
-  '直接回答': { label: '直接回答', color: '#6b7280', bg: '#f3f4f6' },
-  '任务完成': { label: '完成', color: '#059669', bg: '#ecfdf5' },
-  '任务失败': { label: '失败', color: '#dc2626', bg: '#fef2f2' },
+  '任务启动': { label: '启动', stageClass: 'stage-neutral' },
+  '意图识别': { label: '意图识别', stageClass: 'stage-neutral' },
+  '知识库检索': { label: '知识检索', stageClass: 'stage-neutral' },
+  '大纲生成': { label: '大纲生成', stageClass: 'stage-neutral' },
+  '正文写作': { label: '正文写作', stageClass: 'stage-neutral' },
+  '内容评审': { label: '内容评审', stageClass: 'stage-neutral' },
+  '润色': { label: '润色', stageClass: 'stage-neutral' },
+  '直接回答': { label: '直接回答', stageClass: 'stage-neutral' },
+  '任务完成': { label: '完成', stageClass: 'stage-success' },
+  '任务失败': { label: '失败', stageClass: 'stage-error' },
 };
 
 const parseStatusText = (text) => {
@@ -80,11 +80,10 @@ const renderIntentDetail = (data) => (
   </div>
 );
 
-const scoreColor = (score) => {
-  if (score >= 9) return '#059669';
-  if (score >= 7) return '#10b981';
-  if (score >= 5) return '#f59e0b';
-  return '#ef4444';
+const scoreClass = (score) => {
+  if (score >= 7) return 'score-high';
+  if (score >= 5) return 'score-mid';
+  return 'score-low';
 };
 
 const verdictClass = (verdict) => {
@@ -107,7 +106,7 @@ const renderReviewDetail = (data) => {
     <div className="tp-review-card">
       <div className="tp-score-header">
         <span className="tp-score-label">综合评分</span>
-        <span className="tp-score-number" style={{ color: scoreColor(data['综合评分']) }}>
+        <span className={`tp-score-number ${scoreClass(data['综合评分'])}`}>
           {data['综合评分']}<span className="tp-score-max">/10</span>
         </span>
         <span className={`tp-verdict-badge ${verdictClass(data['结论'])}`}>
@@ -121,11 +120,11 @@ const renderReviewDetail = (data) => {
               <span className="tp-dim-label">{dim}</span>
               <div className="tp-dim-bar-bg">
                 <div
-                  className="tp-dim-bar-fill"
-                  style={{ width: `${(Number(data[dim]) / 10) * 100}%`, backgroundColor: scoreColor(data[dim]) }}
+                  className={`tp-dim-bar-fill ${scoreClass(data[dim])}`}
+                  style={{ width: `${(Number(data[dim]) / 10) * 100}%` }}
                 />
               </div>
-              <span className="tp-dim-score" style={{ color: scoreColor(data[dim]) }}>{data[dim]}</span>
+              <span className={`tp-dim-score ${scoreClass(data[dim])}`}>{data[dim]}</span>
             </div>
           ))}
         </div>
@@ -165,9 +164,9 @@ const StreamingText = ({ text, isStreaming }) => {
 };
 
 const StatusStageBadge = ({ stage }) => {
-  const config = STAGE_CONFIG[stage] || { label: stage, color: '#6b7280', bg: '#f3f4f6' };
+  const config = STAGE_CONFIG[stage] || { label: stage, stageClass: 'stage-neutral' };
   return (
-    <span className="status-stage-badge" style={{ color: config.color, backgroundColor: config.bg }}>
+    <span className={`status-stage-badge ${config.stageClass}`}>
       {config.label}
     </span>
   );

@@ -19,10 +19,10 @@ const SCOPE_MAP = {
   PROJECT: '项目',
 };
 
-const IMPORTANCE_COLOR = {
-  HIGH: '#dc2626',
-  MEDIUM: '#d97706',
-  LOW: '#16a34a',
+const IMPORTANCE_CLASS = {
+  HIGH: 'importance-high',
+  MEDIUM: 'importance-medium',
+  LOW: 'importance-low',
 };
 
 const IMPORTANCE_LABEL = {
@@ -332,8 +332,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                 </div>
                 <div className="memory-card-importance">
                   <span
-                    className="memory-importance-dot"
-                    style={{ background: IMPORTANCE_COLOR[m.importance] || '#999' }}
+                    className={`memory-importance-dot ${IMPORTANCE_CLASS[m.importance] || 'importance-none'}`}
                   />
                   {IMPORTANCE_LABEL[m.importance] || m.importance}
                 </div>

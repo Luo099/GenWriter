@@ -11,14 +11,6 @@ const PROVIDER_TYPE_LABEL = {
   openai_compatible: 'OpenAI 兼容',
 };
 
-const PROVIDER_TYPE_COLOR = {
-  dashscope: '#78716c',
-  deepseek: '#78716c',
-  moonshot: '#78716c',
-  zhipu: '#78716c',
-  openai_compatible: '#78716c',
-};
-
 const SettingsPanel = () => {
   const [providers, setProviders] = useState([]);
   const [activeModel, setActiveModel] = useState(null);
@@ -197,9 +189,6 @@ const SettingsPanel = () => {
                 <div className="settings-provider-title-row">
                   <span
                     className="settings-provider-badge"
-                    style={{
-                      background: PROVIDER_TYPE_COLOR[provider.type] || '#6b7280',
-                    }}
                   >
                     {PROVIDER_TYPE_LABEL[provider.type] || provider.type}
                   </span>

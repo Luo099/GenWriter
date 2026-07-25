@@ -14,17 +14,6 @@ const KIND_LABELS = {
   ERROR: '错误',
 };
 
-const KIND_STYLES = {
-  SUPERVISOR: { color: '#4b5563', bg: '#f3f4f6', border: '#e5e7eb' },
-  WORKER: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  LLM: { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  TOOL: { color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' },
-  RAG: { color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-  MEMORY: { color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-  STATUS: { color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-  ERROR: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-};
-
 const PHASE_TO_STATUS = {
   STARTED: 'STARTED',
   RUNNING: 'RUNNING',

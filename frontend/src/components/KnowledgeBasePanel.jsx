@@ -223,13 +223,13 @@ const KnowledgeBasePanel = ({ onBack }) => {
                 style={{ gridTemplateColumns: '1fr 100px 140px 100px', paddingLeft: 'var(--panel-padding-x)', paddingRight: 'var(--panel-padding-x)' }}
               >
                 <div className="memory-card-content">
-                  <div style={{ fontWeight: 500, marginBottom: 2 }}>{kb.name}</div>
+                  <div className="kb-name">{kb.name}</div>
                   {kb.description && (
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{kb.description}</div>
+                    <div className="kb-desc">{kb.description}</div>
                   )}
                 </div>
                 <div className="memory-card-type">
-                  <span className="memory-badge" style={{ background: '#f0f9ff', color: '#0ea5e9' }}>
+                  <span className="memory-badge badge-info">
                     {KB_TYPE_MAP[kb.type] || kb.type}
                   </span>
                 </div>

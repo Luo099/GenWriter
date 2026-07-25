@@ -130,7 +130,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
           <span className="memory-panel-count">共 {chunks.length} 个片段</span>
         </div>
         {chunks.length > 0 && (
-          <button className="memory-new-btn" onClick={handleClearAll} style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>
+          <button className="memory-new-btn kb-clear-btn" onClick={handleClearAll}>
             <Trash2 size={16} strokeWidth={2} />
             清空片段
           </button>
@@ -138,29 +138,18 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
       </div>
 
       {/* 上传区域 */}
-      <div className="panel-section" style={{ padding: '14px var(--panel-padding-x)', borderBottom: '1px solid var(--border-light)', background: '#fafafa' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="panel-section kb-upload-section">
+        <div className="kb-upload-row">
           <input
             id="kb-upload-input"
             type="file"
             onChange={handleFileChange}
-            style={{ display: 'none' }}
+            className="visually-hidden-file"
             accept=".txt,.md,.pdf,.doc,.docx"
           />
           <label
             htmlFor="kb-upload-input"
-            style={{
-              padding: '8px 16px',
-              border: '1px dashed var(--border-color)',
-              borderRadius: 'var(--radius-sm)',
-              cursor: 'pointer',
-              fontSize: 13,
-              color: 'var(--text-secondary)',
-              background: 'var(--bg-primary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            className="kb-upload-label"
           >
             <Upload size={16} strokeWidth={2} />
             {selectedFile ? selectedFile.name : '选择文件'}
@@ -169,8 +158,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
           <select
             value={strategy}
             onChange={(e) => setStrategy(e.target.value)}
-            className="memory-filter-select"
-            style={{ margin: 0 }}
+            className="memory-filter-select no-margin"
           >
             {Object.entries(STRATEGY_MAP).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -178,14 +166,13 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
           </select>
 
           <button
-            className="memory-new-btn"
+            className="memory-new-btn no-margin"
             onClick={handleUpload}
             disabled={uploading || !selectedFile}
-            style={{ margin: 0 }}
           >
             {uploading ? (
               <>
-                <div className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></div>
+                <div className="loading-spinner kb-spinner-sm"></div>
                 上传中...
               </>
             ) : (
@@ -198,10 +185,10 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
         </div>
 
         {uploadError && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#dc2626' }}>{uploadError}</div>
+          <div className="kb-upload-hint kb-upload-hint-error">{uploadError}</div>
         )}
         {uploadSuccess && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#16a34a' }}>上传成功，正在处理中...</div>
+          <div className="kb-upload-hint kb-upload-hint-success">上传成功，正在处理中...</div>
         )}
       </div>
 
@@ -223,7 +210,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
         </div>
       ) : (
         <>
-          <div className="memory-table-header" style={{ gridTemplateColumns: '1fr 140px 80px', paddingLeft: 'var(--panel-padding-x)' }}>
+          <div className="memory-table-header kb-grid-3col">
             <span>内容预览</span>
             <span>创建时间</span>
             <span>操作</span>
@@ -232,8 +219,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
             {chunks.map((chunk) => (
               <div
                 key={chunk.id}
-                className="memory-card"
-                style={{ gridTemplateColumns: '1fr 140px 80px', paddingLeft: 'var(--panel-padding-x)', paddingRight: 'var(--panel-padding-x)' }}
+                className="memory-card kb-grid-3col-card"
               >
                 <div className="memory-card-content" title={chunk.content}>
                   {chunk.content?.substring(0, 120)}

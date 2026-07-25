@@ -335,13 +335,13 @@ const SkillPanel = ({ onBack }) => {
       <div className="skill-panel-header">
         <div className="skill-panel-header-left">
           {onBack && (
-            <button className="skill-back-btn" onClick={onBack} title="返回">
+            <button className="panel-back-btn" onClick={onBack} title="返回">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
             </button>
           )}
-          <h2 className="skill-panel-title">技能管理</h2>
+          <h2 className="panel-title">技能管理</h2>
           <span className="skill-panel-count">共 {skills.length} 个</span>
         </div>
         <div className="skill-panel-header-right">
@@ -420,7 +420,7 @@ const SkillPanel = ({ onBack }) => {
           <p>加载中...</p>
         </div>
       ) : skills.length === 0 ? (
-        <div className="skill-empty">
+        <div className="panel-empty">
           <p>暂无技能</p>
           <span>点击「新建技能」创建你的第一个技能，或将 .md 文件放入 skills 目录</span>
         </div>

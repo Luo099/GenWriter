@@ -47,6 +47,9 @@
   --accent-color: #a96e3b;
   --accent-hover: #956134;
   --accent-soft: #f1ece6;
+  --button-primary-bg: #a26a39;
+  --button-primary-hover: #8f5d32;
+  --button-primary-text: #ffffff;
   --status-success-bg: #e4eee7;
   --status-success-text: #2b5140;
   --status-warning-bg: var(--ochre-100);
@@ -267,8 +270,8 @@ button:disabled { cursor: not-allowed; }
 .workspace-view-switch button { border-radius: 4px; min-height: 32px; padding: 6px 10px; }
 .workspace-view-switch button[aria-pressed=true] { color: var(--ink-on-100); background: var(--ink-100); }
 .workspace-header-actions { margin-left: auto; gap: 8px; }
-.workspace-header-actions > .workspace-action:last-child { background: var(--accent-color); color: var(--text-inverse); border-color: var(--accent-border); }
-.workspace-header-actions > .workspace-action:last-child:hover { background: var(--accent-hover); color: var(--accent-on-hover); }
+.workspace-header-actions > .workspace-action:last-child { background: var(--button-primary-bg); color: var(--button-primary-text); border-color: var(--button-primary-bg); }
+.workspace-header-actions > .workspace-action:last-child:hover { background: var(--button-primary-hover); color: var(--button-primary-text); border-color: var(--button-primary-hover); }
 .work-editor { background: var(--bg-panel); }
 .work-editor-heading { min-height: 52px; padding: 12px 24px; background: var(--paper-100); border-bottom: 1px solid var(--border-subtle); }
 .work-editor-breadcrumb { gap: 12px; font-size: 12px; }
@@ -396,14 +399,14 @@ button:disabled { cursor: not-allowed; }
 .theme-custom .workspace-action { height: 40px; }
 .theme-error { flex-basis: 100%; color: var(--status-error-text); font-size: 12px; }
 :is(.workspace-primary, .new-chat-btn, .memory-new-btn, .memory-btn-primary, .export-confirm-btn, .skill-new-btn, .learning-submit-btn, .settings-switch-btn, .send-btn, .iteration-submit, .suggestion-actions button:first-child, .suggestion-actions button:nth-child(2), .workbench-confirm-actions .primary) {
-  background: var(--accent-color);
-  border-color: var(--accent-border);
-  color: var(--text-inverse);
+  background: var(--button-primary-bg);
+  border-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
 }
 :is(.workspace-primary, .new-chat-btn, .memory-new-btn, .memory-btn-primary, .export-confirm-btn, .skill-new-btn, .learning-submit-btn, .settings-switch-btn, .send-btn, .iteration-submit, .suggestion-actions button:first-child, .suggestion-actions button:nth-child(2), .workbench-confirm-actions .primary):hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-  color: var(--accent-on-hover);
+  background: var(--button-primary-hover);
+  border-color: var(--button-primary-hover);
+  color: var(--button-primary-text);
   opacity: 1;
 }
 .send-btn { border: 1px solid var(--accent-border); }

@@ -34,6 +34,16 @@ export const contrastRatio = (first, second) => {
 
 export const contrastingText = (background) => contrastRatio(background, '#ffffff') >= contrastRatio(background, '#000000') ? '#ffffff' : '#000000';
 
+function backgroundForText(background, foreground, minimum = 4.5) {
+  if (contrastRatio(background, foreground) >= minimum) return background;
+  const direction = foreground === '#ffffff' ? '#000000' : '#ffffff';
+  for (let step = 1; step <= 100; step += 1) {
+    const candidate = mix(background, direction, step / 100);
+    if (contrastRatio(candidate, foreground) >= minimum) return candidate;
+  }
+  return direction;
+}
+
 function readableColor(color, background, minimum) {
   for (let step = 0; step <= 100; step += 1) {
     const candidate = mix(color, '#000000', step / 100);
@@ -49,11 +59,18 @@ export function createThemeTokens(value) {
   const text = readableColor(color, '#f5f3ed', 5.5);
   const hover = mix(color, luminance(color) < 0.02 ? '#ffffff' : '#000000', 0.12);
   const focus = readableColor(color, '#fcfbf8', 3);
+  const buttonText = contrastRatio(color, '#ffffff') >= 4.2 ? '#ffffff' : '#000000';
+  const buttonBackground = backgroundForText(color, buttonText);
+  const hoverDirection = buttonText === '#ffffff' && luminance(buttonBackground) < 0.02 ? '#ffffff' : '#000000';
+  const buttonHover = backgroundForText(mix(buttonBackground, hoverDirection, 0.12), buttonText);
   const ink50 = mix('#fcfbf8', text, 0.04);
   const ink100 = mix('#fcfbf8', text, 0.09);
   const accentSoft = mix('#fcfbf8', text, 0.09);
   return {
     '--theme-color': color,
+    '--button-primary-bg': buttonBackground,
+    '--button-primary-hover': buttonHover,
+    '--button-primary-text': buttonText,
     '--ink-50': ink50,
     '--ink-100': ink100,
     '--ink-200': mix('#fcfbf8', text, 0.2),

@@ -3,6 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import * as skillsApi from '../api/skills';
 import SelectField from './SelectField';
+import PageHeading from './PageHeading';
+import DialogSurface from './DialogSurface';
+import EmptyState from './EmptyState';
 
 const CATEGORY_MAP = {
   writing: '写作',
@@ -89,7 +92,7 @@ const GuidanceBar = ({ children }) => (
 
 const SkillPanel = ({ onBack }) => {
   const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -332,19 +335,7 @@ const SkillPanel = ({ onBack }) => {
 
   return (
     <div className="skill-panel">
-      <div className="skill-panel-header">
-        <div className="skill-panel-header-left">
-          {onBack && (
-            <button className="skill-back-btn" onClick={onBack} title="返回">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-          )}
-          <h2 className="skill-panel-title">技能管理</h2>
-          <span className="skill-panel-count">共 {skills.length} 个</span>
-        </div>
-        <div className="skill-panel-header-right">
+      <PageHeading title="技能管理" count={`${skills.length} 个`} onBack={onBack} actions={<div className="skill-panel-header-right">
           <button className="skill-new-btn" onClick={handleOpenCreate} title="新建技能">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -368,8 +359,7 @@ const SkillPanel = ({ onBack }) => {
             </svg>
             {reloading ? '加载中...' : '重新加载'}
           </button>
-        </div>
-      </div>
+        </div>} />
 
       <div className="skill-toolbar">
         <div className="skill-search">
@@ -403,10 +393,7 @@ const SkillPanel = ({ onBack }) => {
           <p>加载中...</p>
         </div>
       ) : skills.length === 0 ? (
-        <div className="skill-empty">
-          <p>暂无技能</p>
-          <span>点击「新建技能」创建你的第一个技能，或将 .md 文件放入 skills 目录</span>
-        </div>
+        <EmptyState filtered={Boolean(keyword || filterCategory || filterEnabled)} title={keyword || filterCategory || filterEnabled ? '无匹配技能' : '暂无技能'} action={keyword || filterCategory || filterEnabled ? '清除筛选' : '新建技能'} onAction={keyword || filterCategory || filterEnabled ? () => { setKeyword(''); setFilterCategory(''); setFilterEnabled(''); } : handleOpenCreate} />
       ) : (
         <div className="skill-list">
           {skills.map((skill) => (
@@ -493,10 +480,10 @@ const SkillPanel = ({ onBack }) => {
       {/* Create / Edit Modal */}
       {showModal && (
         <div className="memory-modal-overlay" onClick={handleCloseModal}>
-          <div className="memory-modal skill-modal" onClick={(e) => e.stopPropagation()}>
+          <DialogSurface className="memory-modal skill-modal" label={editingSkill ? '编辑技能' : '新建技能'} onClose={handleCloseModal} busy={saving}>
             <div className="memory-modal-header">
-              <h3>{editingSkill ? '编辑技能' : '新建技能'}</h3>
-              <button className="memory-modal-close" onClick={handleCloseModal}>
+              <h1 className="dialog-title">{editingSkill ? '编辑技能' : '新建技能'}</h1>
+              <button className="memory-modal-close" aria-label="关闭对话框" onClick={handleCloseModal}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -567,7 +554,7 @@ const SkillPanel = ({ onBack }) => {
                           使用第三人称格式，如 "This skill should be used when..."，并包含具体的触发短语
                         </span>
                       </div>
-                      <div className="memory-form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div className="memory-form-group skill-metadata-grid">
                         <div>
                           <label htmlFor="skill-category">分类</label>
                           <SelectField id="skill-category" aria-label="技能分类" value={formData.category} onChange={(value) => updateField('category', value)}
@@ -722,7 +709,7 @@ const SkillPanel = ({ onBack }) => {
                 </button>
               )}
             </div>
-          </div>
+          </DialogSurface>
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import ContentTree from './ContentTree';
+import BrandMark from './BrandMark';
 
 const navItems = [
-  { key: 'chat', label: '对话', icon: (
+  { key: 'chat', label: '写作空间', icon: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
@@ -131,6 +132,10 @@ const Sidebar = ({
   };
 
   const toggleCollapsed = () => setSidebarCollapsed(!isCollapsed);
+  const navigate = (nextView) => {
+    onNavigate(nextView);
+    if (window.matchMedia('(max-width: 760px)').matches) setSidebarCollapsed(true);
+  };
 
   const handleResizePointerDown = (event) => {
     if (event.button !== 0) return;
@@ -302,6 +307,7 @@ const Sidebar = ({
       className={`sidebar ${isCollapsed ? 'is-collapsed' : ''}${isResizing ? ' is-resizing' : ''}`}
       style={{ '--sidebar-current-width': `${sidebarWidth}px` }}
     >
+      <div className="sidebar-brand"><BrandMark size={32} />{!isCollapsed && <span className="sidebar-wordmark">GenWriter</span>}</div>
       <div className="sidebar-header">
         <button
           className="sidebar-collapse-btn"
@@ -315,7 +321,7 @@ const Sidebar = ({
             <path d={isCollapsed ? 'M9 4v16m6-10 3 2-3 2' : 'M9 4v16m6-4-3-2 3-2'}></path>
           </svg>
         </button>
-        <button className="new-chat-btn" onClick={onNewChat} title="新对话" aria-label="新对话">
+        <button className="new-chat-btn" onClick={() => { onNavigate('chat'); workspace?.preferences({ mode: 'agent', agentView: 'chat' }); onNewChat(); }} title="新对话" aria-label="新对话">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -330,7 +336,7 @@ const Sidebar = ({
             <button
               key={item.key}
               className={`sidebar-compact-nav-item ${view === item.key ? 'active' : ''}`}
-              onClick={() => onNavigate(item.key)}
+              onClick={() => navigate(item.key)}
               title={item.label}
               aria-label={item.label}
               aria-current={view === item.key ? 'page' : undefined}
@@ -342,10 +348,16 @@ const Sidebar = ({
       )}
 
       <div className="sidebar-content">
+        {!isCollapsed && <nav className="sidebar-main-nav" aria-label="主导航">
+
+          {navItems.map((item) => <button key={item.key} type="button" className={`sidebar-nav-item ${view === item.key ? 'active' : ''}`} onClick={() => navigate(item.key)} aria-current={view === item.key ? 'page' : undefined}>
+            {item.icon}<span>{item.key === 'chat' ? '写作空间' : item.label}</span>{view === item.key && <i />}
+          </button>)}
+        </nav>}
         <div className="project-section">
           <div className="project-section-header">
-            <span className="section-label">作品项目</span>
-            <button className="section-action-btn" onClick={onNewProject} title="新建项目">
+            <span className="section-label">作品</span>
+            <button className="section-action-btn" onClick={() => { onNavigate('chat'); onNewProject(); }} title="新建项目">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -353,11 +365,14 @@ const Sidebar = ({
             </button>
           </div>
           <div className="project-list">
+            {!projects.length && <button className="sidebar-project-empty" type="button" onClick={onNewProject}>创建你的第一部作品 <span>＋</span></button>}
             {projects.map((project) => (
               <div
                 key={project.id}
                 className={`project-item ${activeProject?.id === project.id ? 'active' : ''}`}
-                onClick={() => onSelectProject(project)}
+                role="button" tabIndex={0} aria-label={`打开作品 ${project.name}`}
+                onClick={() => { onSelectProject(project); navigate('chat'); }}
+                onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelectProject(project); navigate('chat'); } }}
                 onMouseLeave={() => setConfirmDeleteProjectId(null)}
               >
                 <svg className="project-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -367,6 +382,7 @@ const Sidebar = ({
                   <input
                     ref={projectInputRef}
                     className="sidebar-edit-input"
+                    aria-label="重命名作品"
                     value={editingProjectName}
                     onChange={(e) => setEditingProjectName(e.target.value)}
                     onBlur={commitProjectEdit}
@@ -417,6 +433,9 @@ const Sidebar = ({
               <div
                 key={session.id}
                 className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
+                role="button" tabIndex={0} aria-label={`打开会话 ${session.title}`}
+                onFocus={() => setHoveredSession(session.id)}
+                onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelectSession(session); navigate('chat'); workspace?.preferences({ agentView: 'chat' }); } }}
                 onClick={() => { onSelectSession(session); onNavigate('chat'); workspace?.preferences({ agentView: 'chat' }); }}
                 onMouseEnter={() => setHoveredSession(session.id)}
                 onMouseLeave={() => {
@@ -431,6 +450,7 @@ const Sidebar = ({
                   <input
                     ref={sessionInputRef}
                     className="sidebar-edit-input"
+                    aria-label="重命名会话"
                     value={editingSessionTitle}
                     onChange={(e) => setEditingSessionTitle(e.target.value)}
                     onBlur={commitSessionEdit}
@@ -471,12 +491,12 @@ const Sidebar = ({
       </div>
 
       <div className="sidebar-footer" ref={userMenuRef}>
-        <div
+        <button type="button" aria-label="用户菜单" aria-expanded={isUserMenuOpen}
           className="user-info"
           onClick={() => setIsUserMenuOpen((prev) => !prev)}
         >
-          <div className="user-avatar">U</div>
-          <span className="user-name">用户</span>
+          <div className="user-avatar">作</div>
+          <span className="user-name">创作者</span>
           <svg
             className={`user-menu-arrow ${isUserMenuOpen ? 'open' : ''}`}
             width="14"
@@ -488,7 +508,7 @@ const Sidebar = ({
           >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-        </div>
+        </button>
         {isUserMenuOpen && (
           <div className="user-dropdown-menu">
             {navItems.map((item) => (
@@ -496,7 +516,7 @@ const Sidebar = ({
                 key={item.key}
                 className={`user-dropdown-item ${view === item.key ? 'active' : ''}`}
                 onClick={() => {
-                  onNavigate(item.key);
+                  navigate(item.key);
                   setIsUserMenuOpen(false);
                 }}
               >

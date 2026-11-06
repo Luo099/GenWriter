@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useImperativeHandle } from 'react';
 import AttachmentPreview from './AttachmentPreview';
 import { uploadAttachment, deleteAttachment, getThumbnailUrl } from '../api/attachments';
 import { ArrowRight, CircleHelp, FilePlus2, Globe2, Paperclip, Send, Sparkles, Wand2 } from 'lucide-react';
@@ -17,7 +17,7 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
-const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) => {
+const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '', ref }) => {
   const [inputValue, setInputValue] = useState('');
   const [mode, setMode] = useState('AUTO');
   const [webSearch, setWebSearch] = useState(true);
@@ -26,6 +26,8 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({ insertPrompt(text) { setInputValue(text); textareaRef.current?.focus(); } }), []);
 
   useEffect(() => {
     if (textareaRef.current) {

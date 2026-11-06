@@ -91,7 +91,7 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
     <button className="legacy-entry" type="button" onClick={onLegacy}><Archive size={14} />历史文稿</button>
     {dialog && <div className="workspace-modal-overlay" onKeyDown={(event) => { if (event.key === 'Escape') setDialog(null); }}>
       <form className="workspace-dialog" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="node-dialog-title">
-        <h2 id="node-dialog-title">{{ create: '新建正文节点', rename: '重命名', move: '移动正文节点', delete: '删除正文节点' }[dialog.type]}</h2>
+        <h1 id="node-dialog-title" className="dialog-title">{{ create: '新建正文节点', rename: '重命名', move: '移动正文节点', delete: '删除正文节点' }[dialog.type]}</h1>
         {['create', 'rename'].includes(dialog.type) && <label>标题<input autoFocus required maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} /></label>}
         {['create', 'move'].includes(dialog.type) && <><label htmlFor="node-parent">放入节点</label><SelectField id="node-parent" aria-label="放入节点" value={parentId} onChange={setParentId}
           options={workspace.nodes.filter((node) => dialog.type !== 'move' || !isDescendant(node.id, dialog.node.id)).map((node) => ({ value: node.id, label: `${'　'.repeat(depthOf(node))}${node.title}` }))} /></>}

@@ -102,7 +102,7 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
       <section className="version-navigator empty" aria-label="版本导航">
         <CircleDashed size={14} />
         <strong>尚未创建版本</strong>
-        <span className="workbench-muted">保存文稿后即可开始迭代</span>
+
       </section>
     );
   }
@@ -111,10 +111,10 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
     <section className="version-navigator" aria-label="版本导航">
       <div className="version-summary">
         <div className="version-summary-main">
-          <span className="version-kicker">当前版本</span>
+          <span className="version-kicker">{selectedDocument.id === latestDocument?.id ? '当前版本' : '历史版本'}</span>
           <div className="version-summary-heading">
             <strong>V{selectedDocument.version}</strong>
-            <VersionBadge tone="current">当前</VersionBadge>
+            <VersionBadge tone="current">查看中</VersionBadge>
             {selectedDocument.id === latestDocument?.id && <VersionBadge tone="latest">最新</VersionBadge>}
             {dirty && <VersionBadge tone="dirty">未保存</VersionBadge>}
           </div>
@@ -172,7 +172,7 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
               aria-current={isCurrent ? 'page' : undefined}
             >
               <span>V{document.version}</span>
-              <small>{isCurrent ? '当前' : isLatest ? '最新' : getDocumentSourceLabel(document)}</small>
+              <small>{isCurrent ? '查看中' : isLatest ? '最新' : getDocumentSourceLabel(document)}</small>
             </button>
           );
         })}
@@ -197,7 +197,7 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
             <div className="version-history-header">
               <div>
                 <span className="version-kicker">版本记录</span>
-                <h3 id="version-history-title">全部版本</h3>
+                <h1 id="version-history-title" className="dialog-title">全部版本</h1>
               </div>
               <button
                 ref={closeButtonRef}
@@ -231,7 +231,7 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
                       <small>{getDocumentSourceLabel(document)} · {formatVersionTime(document.updatedAt)}</small>
                     </span>
                     <span className="version-history-status">
-                      {isCurrent && <VersionBadge tone="current">当前</VersionBadge>}
+                      {isCurrent && <VersionBadge tone="current">查看中</VersionBadge>}
                       {isLatest && <VersionBadge tone="latest">最新</VersionBadge>}
                     </span>
                   </button>

@@ -36,7 +36,7 @@
 }
 .workspace-project-title svg {
   flex-shrink: 0;
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 .workspace-project-title h1 {
   font-size: 15px;
@@ -69,7 +69,7 @@
 }
 .workspace-mode-switch button[aria-pressed=true] {
   background: var(--bg-panel);
-  color: var(--accent-hover);
+  color: var(--accent-text);
   box-shadow: var(--shadow-sm);
 }
 .workspace-view-switch {
@@ -88,7 +88,7 @@
 }
 .workspace-view-switch button[aria-pressed=true] {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 .workspace-header-actions {
   display: flex;
@@ -113,7 +113,7 @@
 .workspace-primary {
   background: var(--accent-color);
   color: var(--text-inverse,#fff);
-  border-color: var(--accent-color);
+  border-color: var(--accent-border);
 }
 .workspace-action:hover {
   background: var(--bg-hover);
@@ -156,7 +156,7 @@
   padding: 1px 4px;
   border-radius: 10px;
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 .workspace-running {
   font-size: 11px;
@@ -316,7 +316,7 @@
   color: var(--text-secondary);
 }
 .workspace-chat-welcome svg {
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 .workspace-chat-welcome h2 {
   font-size: 17px;
@@ -367,7 +367,7 @@
   padding: 7px 8px;
   border-radius: 5px;
   font-size: 10px;
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 .workspace-task-target select {
   font: inherit;
@@ -409,7 +409,7 @@
 }
 .workspace-candidate-card>div>span {
   font-size: 10px;
-  color: var(--accent-color);
+  color: var(--accent-text);
   white-space: nowrap;
 }
 .workspace-candidate-card>p {
@@ -563,8 +563,8 @@
 }
 .work-operation-pills button.active {
   background: var(--accent-soft);
-  color: var(--accent-hover);
-  border-color: var(--accent-color);
+  color: var(--accent-text);
+  border-color: var(--accent-border);
 }
 .work-iteration textarea {
   display: block;
@@ -698,7 +698,7 @@
   background: var(--bg-hover);
 }
 .work-tree-row.selected {
-  color: var(--accent-hover);
+  color: var(--accent-text);
   background: var(--accent-soft);
 }
 .tree-expand {
@@ -745,7 +745,7 @@
 .tree-select i {
   font-style: normal;
   font-size: 8px;
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 .tree-menu {
   position: relative;
@@ -928,7 +928,7 @@
 .workspace-dialog-actions .workspace-primary {
   background: var(--accent-color);
   color: var(--text-inverse,#fff);
-  border-color: var(--accent-color);
+  border-color: var(--accent-border);
 }
 .candidate-comparison {
   display: grid;
@@ -1039,7 +1039,7 @@
   background: var(--bg-panel-sunken);
 }
 .work-empty svg {
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 .work-empty h1 {
   font-family: var(--font-serif);

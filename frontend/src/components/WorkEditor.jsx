@@ -91,7 +91,7 @@ export default function WorkEditor({ workspace, onSend, isLoading, sessionId, se
   };
 
   return <section className="work-editor" data-node-id={node?.id} aria-busy={!ready} aria-label="作品正文编辑器">
-    <header className="work-editor-heading"><div className="work-editor-breadcrumb"><span>作品正文</span><ChevronRight size={13} /><h2>{node?.title || '正文'}</h2></div>
+    <header className="work-editor-heading"><div className="work-editor-breadcrumb"><span>作品正文</span><ChevronRight size={13} /><span className="work-editor-node-title">{node?.title || '正文'}</span></div>
       <span className="workspace-save-state">{historical ? '历史快照 · 只读' : draft?.dirty ? '有未保存修改' : node?.currentDocumentId ? '已保存' : '尚未保存'}</span>
       {workspace.mode === 'studio' && <button className="workspace-icon-button" type="button" aria-label={workspace.assistantCollapsed ? '展开助手' : '收起助手'}
         onClick={() => workspace.preferences({ assistantCollapsed: !workspace.assistantCollapsed })}>
@@ -112,20 +112,20 @@ export default function WorkEditor({ workspace, onSend, isLoading, sessionId, se
         {historical && draft?.dirty && <p className="workspace-notice">当前正文的未保存修改已保留，切回当前版本可继续编辑。</p>}
         <RichMarkdownEditor documentKey={node ? `${node.id}:${historical ? selectedId : 'current'}` : undefined} value={content}
           onChange={(value) => { if (node && !historical) workspace.updateDraft(node.id, { content: value }); }}
-          disabled={!ready || historical || saving || selectionLoading} placeholder="从这里开始写作。正文独立于会话保存。"
+          disabled={!ready || historical || saving || selectionLoading} placeholder="开始写作…"
           onEditorReady={onEditorReady} onSelectionSnapshot={selectionChanged} />
         {selectionLoading && <p className="workspace-notice">正在生成选区候选，正文将在采纳后更新…</p>}
-        {notice && <p className="workspace-notice" role="status">{notice}</p>}
+        {notice && !historical && <p className="workspace-notice" role="status">{notice}</p>}
         {error && <p className="workspace-error" role="alert">{error}</p>}
         <div className="work-iteration">
-          <div className="work-iteration-heading"><Sparkles size={15} /><strong>继续创作</strong><span>生成候选，确认后写入正文</span></div>
+          <div className="work-iteration-heading"><Sparkles size={15} /><strong>继续创作</strong></div>
           <div className="work-operation-pills">{operations.map((item) => <button key={item.value} type="button" aria-pressed={operation === item.value} className={operation === item.value ? 'active' : ''}
             onClick={() => setOperation(item.value)}>{item.label}</button>)}</div>
           <textarea aria-label="正文写作要求" placeholder="补充情节、语气或视角要求……" value={instruction} onChange={(event) => setInstruction(event.target.value)} />
-          <div className="work-iteration-footer"><span>保留原文与当前版本，可随时回溯</span><button className="workspace-primary" type="button" disabled={!ready || historical || isLoading || saving || selectionLoading} onClick={iterate}><Sparkles size={14} />生成候选</button></div>
+          <div className="work-iteration-footer"><button className="workspace-primary" type="button" disabled={!ready || historical || isLoading || saving || selectionLoading} onClick={iterate}><Sparkles size={14} />生成候选</button></div>
         </div>
       </div>
     </div>
-    <footer className="work-editor-footer"><span>{content.replace(/\s/g, '').length} 字</span><span>正文与版本跟随作品保存</span></footer>
+    <footer className="work-editor-footer"><span>{content.replace(/\s/g, '').length} 字</span></footer>
   </section>;
 }

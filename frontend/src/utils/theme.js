@@ -49,10 +49,13 @@ export function createThemeTokens(value) {
   const text = readableColor(color, '#f5f3ed', 5.5);
   const hover = mix(color, luminance(color) < 0.02 ? '#ffffff' : '#000000', 0.12);
   const focus = readableColor(color, '#fcfbf8', 3);
+  const ink50 = mix('#fcfbf8', text, 0.04);
+  const ink100 = mix('#fcfbf8', text, 0.09);
+  const accentSoft = mix('#fcfbf8', text, 0.09);
   return {
     '--theme-color': color,
-    '--ink-50': mix('#fcfbf8', text, 0.04),
-    '--ink-100': mix('#fcfbf8', text, 0.09),
+    '--ink-50': ink50,
+    '--ink-100': ink100,
     '--ink-200': mix('#fcfbf8', text, 0.2),
     '--ink-300': mix('#fcfbf8', text, 0.35),
     '--ink-400': mix('#fcfbf8', text, 0.55),
@@ -63,7 +66,10 @@ export function createThemeTokens(value) {
     '--ink-900': mix(text, '#000000', 0.4),
     '--accent-color': color,
     '--accent-hover': hover,
-    '--accent-soft': mix('#fcfbf8', text, 0.09),
+    '--accent-soft': accentSoft,
+    '--accent-on-soft': contrastingText(accentSoft),
+    '--ink-on-50': contrastingText(ink50),
+    '--ink-on-100': contrastingText(ink100),
     '--accent-text': text,
     '--accent-border': focus,
     '--accent-on-hover': contrastingText(hover),

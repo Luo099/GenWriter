@@ -88,7 +88,7 @@
 }
 .workspace-view-switch button[aria-pressed=true] {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 .workspace-header-actions {
   display: flex;
@@ -120,6 +120,7 @@
 }
 .workspace-primary:hover {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 .project-workspace button:disabled,.workspace-dialog button:disabled {
   opacity: .5;
@@ -563,7 +564,7 @@
 }
 .work-operation-pills button.active {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   border-color: var(--accent-border);
 }
 .work-iteration textarea {

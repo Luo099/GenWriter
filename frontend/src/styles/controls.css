@@ -29,7 +29,7 @@
 .export-confirm-btn, .skill-new-btn, .learning-submit-btn):hover:not(:disabled) {
   border-color: var(--accent-border);
   background: var(--accent-hover);
-  color: var(--text-inverse);
+  color: var(--accent-on-hover);
   opacity: 1;
 }
 
@@ -187,13 +187,13 @@ summary:focus-visible {
 
 .project-item.active .project-name,
 .session-item.active .session-title {
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
 .project-item.active .project-icon,
 .session-item.active .session-icon {
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .project-session-count {
@@ -538,7 +538,7 @@ summary:focus-visible {
 
 .work-editor-toolbar .selection-tools button:hover:not(:disabled) {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .work-editor .rich-markdown-editor {
@@ -600,7 +600,7 @@ summary:focus-visible {
 .editor-format-group button.active {
   border-color: var(--border-subtle);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .editor-source-toggle {
@@ -677,7 +677,7 @@ summary:focus-visible {
 .work-operation-pills button.active {
   border-color: var(--border-strong);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
@@ -990,13 +990,13 @@ summary:focus-visible {
 
 .select-field-option.is-selected {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
 .select-field-option.is-selected.is-active {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .select-field-option[aria-disabled='true'] {
@@ -1304,7 +1304,7 @@ summary:focus-visible {
 .workspace-chat-pane .websearch-toggle.active {
   border-color: var(--border-strong);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 

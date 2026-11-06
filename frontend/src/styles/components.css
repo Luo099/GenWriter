@@ -1037,7 +1037,7 @@
 
 .workbench-rail-button:hover {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .workbench-rail-icon {
@@ -1097,7 +1097,7 @@
 .version-chip.active {
   border-color: var(--accent-border);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .workbench-editor {
@@ -1172,7 +1172,7 @@
 .selection-tools button.active,
 .iteration-modes button.active {
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
   font-weight: 600;
 }
 
@@ -1276,7 +1276,7 @@
 .editor-source-toggle:hover:not(:disabled) {
   border-color: rgba(194, 133, 74, 0.32);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .editor-toolbar-button.active,
@@ -1482,6 +1482,13 @@
   color: var(--text-inverse);
 }
 
+.suggestion-actions button:first-child:hover:not(:disabled),
+.suggestion-actions button:nth-child(2):hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+  color: var(--accent-on-hover);
+}
+
 .suggestion-panel-header button:disabled,
 .suggestion-actions button:disabled {
   opacity: 0.45;
@@ -1567,7 +1574,7 @@
 
 .iteration-submit:hover:not(:disabled) {
   background: var(--accent-hover);
-  color: var(--text-inverse);
+  color: var(--accent-on-hover);
 }
 
 .workbench-footer-note {
@@ -1673,13 +1680,13 @@
 .mode-pill:hover {
   border-color: var(--accent-border);
   color: var(--text-primary);
-  background: rgba(194, 133, 74, 0.06);
+  background: var(--ink-50);
 }
 
 .mode-pill.active {
   border-color: var(--accent-border);
-  background: rgba(194, 133, 74, 0.12);
-  color: var(--accent-text);
+  background: var(--accent-soft);
+  color: var(--accent-on-soft);
   font-weight: 500;
 }
 
@@ -1719,8 +1726,8 @@
 
 .websearch-toggle.active {
   border-color: var(--accent-border);
-  background: rgba(194, 133, 74, 0.12);
-  color: var(--accent-text);
+  background: var(--accent-soft);
+  color: var(--accent-on-soft);
   font-weight: 500;
   opacity: 1;
 }
@@ -3274,6 +3281,7 @@
 
 .memory-new-btn:hover {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 /* 工具栏 */
@@ -3701,6 +3709,7 @@
 
 .memory-btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 .memory-btn-primary:disabled {
@@ -3968,7 +3977,7 @@
 .export-format-btn.active {
   border-color: var(--accent-border);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .export-format-icon {
@@ -4020,6 +4029,7 @@
 
 .export-confirm-btn:hover:not(:disabled) {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 .export-confirm-btn:disabled {
@@ -4265,6 +4275,7 @@
 
 .settings-switch-btn:hover:not(:disabled) {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 .settings-switch-btn:disabled {
@@ -4503,7 +4514,7 @@
 .learning-scope-btn.active {
   border-color: var(--accent-border);
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--accent-on-soft);
 }
 
 .learning-scope-btn:disabled {
@@ -4536,6 +4547,7 @@
 
 .learning-submit-btn:hover:not(:disabled) {
   background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 .learning-submit-btn:disabled {
@@ -5064,9 +5076,9 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: var(--accent-primary, #4f8ff7);
-  color: #fff;
-  border: none;
+  background: var(--accent-color);
+  color: var(--text-inverse);
+  border: 1px solid var(--accent-border);
   border-radius: var(--radius-sm, 6px);
   font-size: var(--fs-sm);
   font-weight: 500;
@@ -5075,7 +5087,8 @@
 }
 
 .skill-new-btn:hover {
-  opacity: 0.9;
+  background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 /* Skill action buttons (edit/delete) */
@@ -6110,6 +6123,11 @@
   border-color: var(--accent-border);
   background: var(--accent-color);
   color: var(--text-inverse);
+}
+.workbench-confirm-actions .primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+  color: var(--accent-on-hover);
 }
 
 @media (max-width: 1120px) {

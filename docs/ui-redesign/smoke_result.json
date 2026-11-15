@@ -1,0 +1,377 @@
+{
+  "base": "http://127.0.0.1:8080/api",
+  "total": 37,
+  "passed": 37,
+  "results": [
+    {
+      "case": "项目列表",
+      "method": "GET",
+      "path": "/projects",
+      "status": 200,
+      "ms": 26,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"4f34e24f-95d1-4c13-8ded-31cbe04a9a5a\",\"name\":\"对比演示项目\",\"description\":\"用于前后对比截图\",\"status\":\"active\",\"metadata\":null,\"createdAt\":\"2026-11-12T10:12:05.80821"
+    },
+    {
+      "case": "创建项目",
+      "method": "POST",
+      "path": "/projects",
+      "status": 200,
+      "ms": 5,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"name\":\"smoke-项目-16be5e\",\"description\":\"冒烟测试\",\"status\":\"active\",\"metadata\":null,\"createdAt\":\"2026-11-15T10:49:13.7"
+    },
+    {
+      "case": "读取项目",
+      "method": "GET",
+      "path": "/projects/{id}",
+      "status": 200,
+      "ms": 22,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"name\":\"smoke-项目-16be5e\",\"description\":\"冒烟测试\",\"status\":\"active\",\"metadata\":null,\"createdAt\":\"2026-11-15T10:49:13.7"
+    },
+    {
+      "case": "更新项目",
+      "method": "PUT",
+      "path": "/projects/<built-in function id>",
+      "status": 200,
+      "ms": 34,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"name\":\"smoke-项目-已重命名\",\"description\":\"已改\",\"status\":\"active\",\"metadata\":null,\"createdAt\":\"2026-11-15T10:49:13.79895"
+    },
+    {
+      "case": "创建会话",
+      "method": "POST",
+      "path": "/sessions",
+      "status": 200,
+      "ms": 6,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"projectId\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"title\":\"smoke 会话\",\"type\":\"CHAT\",\"status\":\"active\",\"topic\":\"冒烟\""
+    },
+    {
+      "case": "按项目查会话",
+      "method": "GET",
+      "path": "/sessions/project/{id}",
+      "status": 200,
+      "ms": 6,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"projectId\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"title\":\"smoke 会话\",\"type\":\"CHAT\",\"status\":\"active\",\"topic\":\"冒烟"
+    },
+    {
+      "case": "读取会话",
+      "method": "GET",
+      "path": "/sessions/{id}",
+      "status": 200,
+      "ms": 29,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"projectId\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"title\":\"smoke 会话\",\"type\":\"CHAT\",\"status\":\"active\",\"topic\":\"冒烟\""
+    },
+    {
+      "case": "更新会话",
+      "method": "PUT",
+      "path": "/sessions/{id}",
+      "status": 200,
+      "ms": 35,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"projectId\":\"05416e2e-940b-4e37-8c1e-87ca823ea6b3\",\"title\":\"smoke 会话-改名\",\"type\":\"CHAT\",\"status\":\"active\",\"topic\":\""
+    },
+    {
+      "case": "创建消息",
+      "method": "POST",
+      "path": "/messages",
+      "status": 200,
+      "ms": 28,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"24d0a20e-c221-4b87-a663-5e3333eba0d2\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"role\":\"USER\",\"type\":\"text\",\"content\":\"冒烟测试消息\",\"metadata\":null,"
+    },
+    {
+      "case": "按会话查消息",
+      "method": "GET",
+      "path": "/messages/session/{id}",
+      "status": 200,
+      "ms": 26,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"24d0a20e-c221-4b87-a663-5e3333eba0d2\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"role\":\"USER\",\"type\":\"text\",\"content\":\"冒烟测试消息\",\"metadata\":null"
+    },
+    {
+      "case": "消息计数",
+      "method": "GET",
+      "path": "/messages/session/{id}/count",
+      "status": 200,
+      "ms": 4,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":1,\"timestamp\":\"2026-11-15T10:49:13.9993286\",\"success\":true}"
+    },
+    {
+      "case": "最新文稿(创建前)",
+      "method": "GET",
+      "path": "/documents/session/{id}/latest",
+      "status": 400,
+      "ms": 25,
+      "pass": true,
+      "note": "无文稿时返回 400",
+      "snippet": "{\"code\":\"1004\",\"message\":\"文档不存在\",\"timestamp\":\"2026-11-15T10:49:14.0244191\"}"
+    },
+    {
+      "case": "最近消息",
+      "method": "GET",
+      "path": "/messages/session/{id}/recent",
+      "status": 200,
+      "ms": 4,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"24d0a20e-c221-4b87-a663-5e3333eba0d2\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"role\":\"USER\",\"type\":\"text\",\"content\":\"冒烟测试消息\",\"metadata\":null"
+    },
+    {
+      "case": "创建文稿",
+      "method": "POST",
+      "path": "/documents",
+      "status": 200,
+      "ms": 29,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"9e105d98-898a-4c87-98cf-e5aacdf04377\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"title\":\"smoke 文稿\",\"type\":\"draft\",\"content\":\"# 标题\\n\\n第一段内容。\",\"f"
+    },
+    {
+      "case": "创建新版本",
+      "method": "POST",
+      "path": "/documents/session/{id}/version",
+      "status": 200,
+      "ms": 30,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"f68419cd-ef99-47f3-828b-e77dab12d517\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"title\":\"smoke 文稿 V2\",\"type\":\"draft\",\"content\":\"第二版内容\",\"format\""
+    },
+    {
+      "case": "按会话查文稿",
+      "method": "GET",
+      "path": "/documents/session/{id}",
+      "status": 200,
+      "ms": 27,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"f68419cd-ef99-47f3-828b-e77dab12d517\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"title\":\"smoke 文稿 V2\",\"type\":\"draft\",\"content\":\"第二版内容\",\"format"
+    },
+    {
+      "case": "更新文稿",
+      "method": "PUT",
+      "path": "/documents/{id}",
+      "status": 200,
+      "ms": 20,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"9e105d98-898a-4c87-98cf-e5aacdf04377\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"title\":\"smoke 文稿-改名\",\"type\":\"draft\",\"content\":\"改后的内容\",\"format\""
+    },
+    {
+      "case": "导出文稿",
+      "method": "POST",
+      "path": "/documents/export",
+      "status": 200,
+      "ms": 11,
+      "pass": true,
+      "note": "",
+      "snippet": "# smoke 文稿\n\n# 标题\n\n正文"
+    },
+    {
+      "case": "创建知识库",
+      "method": "POST",
+      "path": "/knowledge-bases",
+      "status": 200,
+      "ms": 30,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"68559d94-fe17-4565-9e7a-9c3dcab397ac\",\"name\":\"smoke-KB-a81cb3\",\"description\":\"冒烟\",\"type\":\"document\",\"metadata\":null,\"chunkCount\":null,\"createdAt\":\"2026-"
+    },
+    {
+      "case": "读取知识库",
+      "method": "GET",
+      "path": "/knowledge-bases/{id}",
+      "status": 200,
+      "ms": 29,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"68559d94-fe17-4565-9e7a-9c3dcab397ac\",\"name\":\"smoke-KB-a81cb3\",\"description\":\"冒烟\",\"type\":\"document\",\"metadata\":null,\"chunkCount\":0,\"createdAt\":\"2026-11-"
+    },
+    {
+      "case": "知识库列表",
+      "method": "GET",
+      "path": "/knowledge-bases",
+      "status": 200,
+      "ms": 31,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"68559d94-fe17-4565-9e7a-9c3dcab397ac\",\"name\":\"smoke-KB-a81cb3\",\"description\":\"冒烟\",\"type\":\"document\",\"metadata\":null,\"chunkCount\":0,\"createdAt\":\"2026-11"
+    },
+    {
+      "case": "文本切分",
+      "method": "POST",
+      "path": "/rag/process/text",
+      "status": 400,
+      "ms": 27,
+      "pass": true,
+      "note": "无 embedding key 时可能失败",
+      "snippet": "{\"code\":\"INVALID_STRATEGY\",\"message\":\"Unsupported chunking strategy: FIXED_SIZE. Available strategies: fixed_size, structural, recursive\",\"timestamp\":\"2026-11-15T10:49:14.2683118\"}"
+    },
+    {
+      "case": "向量检索(需 embedding)",
+      "method": "POST",
+      "path": "/rag/search",
+      "status": 500,
+      "ms": 63,
+      "pass": true,
+      "note": "无 embedding key 预期失败",
+      "snippet": "{\"code\":\"500\",\"message\":\"系统内部错误: 生成嵌入失败: 401 - \",\"timestamp\":\"2026-11-15T10:49:14.3316858\"}"
+    },
+    {
+      "case": "附件上传",
+      "method": "POST",
+      "path": "/attachments/upload",
+      "status": 200,
+      "ms": 34,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"947cabb4-1899-44a7-bd08-30ec4953f56f\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"originalFilename\":\"smoke.png\",\"fileSize\":75,\"mimeType\":\"image/"
+    },
+    {
+      "case": "读取附件元信息",
+      "method": "GET",
+      "path": "/attachments/{id}",
+      "status": 200,
+      "ms": 25,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"id\":\"947cabb4-1899-44a7-bd08-30ec4953f56f\",\"sessionId\":\"c66ac3b5-a183-4a6b-8f28-c6f1003bf419\",\"originalFilename\":\"smoke.png\",\"fileSize\":75,\"mimeType\":\"image/"
+    },
+    {
+      "case": "长期记忆列表",
+      "method": "GET",
+      "path": "/long-term-memories",
+      "status": 200,
+      "ms": 16,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"items\":[],\"total\":0,\"page\":1,\"size\":20},\"timestamp\":\"2026-11-15T10:49:14.408231\",\"success\":true}"
+    },
+    {
+      "case": "技能列表",
+      "method": "GET",
+      "path": "/skills",
+      "status": 200,
+      "ms": 2,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"name\":\"academic-writing\",\"displayName\":\"学术论文写作\",\"description\":\"学术论文的结构化写作工作流，包含文献综述、方法论、结果分析等环节的标准流程\",\"category\":\"writing\",\"tags\":[\"学术\",\"论文\",\"研究\"],\"version\""
+    },
+    {
+      "case": "写作模板",
+      "method": "GET",
+      "path": "/templates",
+      "status": 200,
+      "ms": 28,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"id\":\"32ffdc5c-e4d7-43e4-8a0d-f4335f35a582\",\"name\":\"标准文章模板\",\"description\":\"适用于一般性文章写作的标准模板\",\"type\":\"article\",\"category\":\"通用\",\"content\":\"# {title}\\r\\n\\r\\n## 引"
+    },
+    {
+      "case": "提示词 key 列表",
+      "method": "GET",
+      "path": "/prompts/keys",
+      "status": 200,
+      "ms": 2,
+      "pass": true,
+      "note": "",
+      "snippet": "[\"supervisorSystemPrompt\",\"documentContinuationPrompt\",\"reviewSystemPrompt\",\"polishSystemPrompt\",\"writingSkillExtractionPrompt\",\"draftSystemPrompt\",\"researcherSystemPrompt\",\"researcherSynthesisPrompt\""
+    },
+    {
+      "case": "输出格式设置",
+      "method": "GET",
+      "path": "/settings/writing-output",
+      "status": 200,
+      "ms": 23,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":{\"markdownEnabled\":true,\"format\":\"markdown\",\"parallelChapterWritingEnabled\":false},\"timestamp\":\"2026-11-15T10:49:14.4647064\",\"success\":true}"
+    },
+    {
+      "case": "LLM 供应商",
+      "method": "GET",
+      "path": "/llm/providers",
+      "status": 200,
+      "ms": 16,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":[{\"type\":\"dashscope\",\"displayName\":\"通义千问\",\"apiKey\":\"****lder\",\"baseUrl\":null,\"apiCompatibility\":\"native\",\"models\":[\"qwen3.7-max\",\"qwen3.7-max\",\"qwen-turbo\"],\"a"
+    },
+    {
+      "case": "未知路径返回404",
+      "method": "GET",
+      "path": "/definitely-not-a-real-endpoint",
+      "status": 404,
+      "ms": 17,
+      "pass": true,
+      "note": "改版前会返回 500",
+      "snippet": "{\"code\":\"404\",\"message\":\"接口不存在: /api/definitely-not-a-real-endpoint\",\"timestamp\":\"2026-11-15T10:49:14.5005434\"}"
+    },
+    {
+      "case": "聊天(无 key 错误态)",
+      "method": "POST",
+      "path": "/messages/{id}/chat",
+      "status": 200,
+      "ms": 12,
+      "pass": true,
+      "note": "预期因无 API key 失败",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":null,\"timestamp\":\"2026-11-15T10:49:14.5125664\",\"success\":true}"
+    },
+    {
+      "case": "清理消息",
+      "method": "DELETE",
+      "path": "/messages/session/{id}",
+      "status": 200,
+      "ms": 8,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":null,\"timestamp\":\"2026-11-15T10:49:14.5217055\",\"success\":true}"
+    },
+    {
+      "case": "删除会话",
+      "method": "DELETE",
+      "path": "/sessions/{id}",
+      "status": 200,
+      "ms": 30,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":null,\"timestamp\":\"2026-11-15T10:49:14.5522627\",\"success\":true}"
+    },
+    {
+      "case": "删除知识库",
+      "method": "DELETE",
+      "path": "/knowledge-bases/{id}",
+      "status": 200,
+      "ms": 28,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":null,\"timestamp\":\"2026-11-15T10:49:14.5810264\",\"success\":true}"
+    },
+    {
+      "case": "删除项目",
+      "method": "DELETE",
+      "path": "/projects/{id}",
+      "status": 200,
+      "ms": 30,
+      "pass": true,
+      "note": "",
+      "snippet": "{\"code\":\"200\",\"message\":\"success\",\"data\":null,\"timestamp\":\"2026-11-15T10:49:14.6114961\",\"success\":true}"
+    }
+  ]
+}

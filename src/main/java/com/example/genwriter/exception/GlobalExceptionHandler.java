@@ -21,6 +21,21 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     /**
+     * 未匹配到任何接口（静态资源兜底）时返回 404，而不是 500
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        log.warn("接口不存在: {}", e.getResourcePath());
+        ErrorResponse response = new ErrorResponse(
+                "404",
+                "接口不存在: /" + e.getResourcePath(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
      * 处理业务异常
      */
     @ExceptionHandler(BizException.class)

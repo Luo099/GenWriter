@@ -206,8 +206,15 @@ const KnowledgeBasePanel = ({ onBack }) => {
         </div>
       ) : knowledgeBases.length === 0 ? (
         <div className="memory-empty">
-          <p>暂无知识库</p>
-          <span>创建知识库后，您可以上传文档进行RAG检索</span>
+          <div className="memory-empty-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <p>还没有知识库</p>
+          <span>建一个知识库并上传文档，Agent 回答时会先检索这些资料，并标出来源。</span>
+          <button className="memory-empty-cta" type="button" onClick={handleOpenCreate}>新建第一个知识库</button>
         </div>
       ) : (
         <>

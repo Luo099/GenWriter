@@ -46,7 +46,8 @@ public class RAGPipelineController {
         }
 
         try {
-            Path uploadDir = Paths.get(uploadPath);
+            // 相对路径会被 Tomcat 解析到 work 目录，这里统一转绝对路径
+            Path uploadDir = Paths.get(uploadPath).toAbsolutePath().normalize();
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
@@ -54,7 +55,9 @@ public class RAGPipelineController {
             String taskId = UUID.randomUUID().toString();
             String filename = taskId + "_" + file.getOriginalFilename();
             Path filePath = uploadDir.resolve(filename);
-            file.transferTo(filePath);
+            try (var in = file.getInputStream()) {
+                Files.copy(in, filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
 
             knowledgeImportService.processImportAsync(taskId, filePath.toString(), kbId, strategy);
 

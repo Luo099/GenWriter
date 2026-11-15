@@ -23,6 +23,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -74,6 +75,21 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     private static final Set<String> TEXT_EXTENSIONS = Set.of("txt", "md", "csv", "json", "xml");
 
+    /**
+     * 解析上传根目录为绝对路径并确保存在。
+     * 相对路径（默认 .uploads）会被 Tomcat 当成相对 work 目录解析，
+     * 在 Windows 下 transferTo 直接抛 FileNotFoundException，因此统一转绝对路径。
+     */
+    private Path resolveBasePath() {
+        Path base = Paths.get(uploadBasePath).toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(base);
+        } catch (IOException e) {
+            log.warn("创建上传目录失败: {}", base, e);
+        }
+        return base;
+    }
+
     @Override
     public MessageAttachment storeFile(MultipartFile file, String sessionId) {
         // 0. 检查上传速率限制
@@ -112,13 +128,15 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         // 6. 生成存储文件名和路径
         String storedFilename = UUID.randomUUID().toString() + "." + extension;
-        Path sessionDir = Paths.get(uploadBasePath, sessionId);
+        Path sessionDir = resolveBasePath().resolve(sessionId).normalize();
         Path filePath = sessionDir.resolve(storedFilename);
 
         try {
-            // 7. 创建目录并保存文件
+            // 7. 创建目录并保存文件（用绝对路径 + 流拷贝，避免 transferTo 对相对路径的解析差异）
             Files.createDirectories(sessionDir);
-            file.transferTo(filePath.toFile());
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             log.error("文件保存失败: sessionId={}, filename={}", sessionId, originalFilename, e);
             throw new BizException(BizException.ErrorCode.SYSTEM_ERROR.getCode(), "文件保存失败");
@@ -163,7 +181,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     @Override
     public String getFilePath(String storedFilename) {
-        return Paths.get(uploadBasePath, storedFilename).toString();
+        return resolveBasePath().resolve(storedFilename).toString();
     }
 
     @Override
@@ -271,7 +289,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             // 保存缩略图
             String thumbFilename = "thumb_" + attachment.getStoredFilename();
-            Path thumbPath = Paths.get(uploadBasePath, attachment.getSessionId(), thumbFilename);
+            Path thumbPath = resolveBasePath().resolve(attachment.getSessionId()).resolve(thumbFilename);
             ImageIO.write(thumbnail, "jpg", thumbPath.toFile());
 
             attachment.setThumbnailPath(thumbPath.toString());
@@ -509,7 +527,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     public void cleanupOrphanFiles() {
         log.info("开始扫描孤儿文件...");
         try {
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get(uploadBasePath);
+            java.nio.file.Path uploadDir = resolveBasePath();
             if (!java.nio.file.Files.exists(uploadDir)) {
                 return;
             }

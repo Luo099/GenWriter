@@ -14,7 +14,7 @@ const operations = [
   { value: 'CREATE_NODE', label: '新增章节', type: 'CONTINUE', fallback: '请承接当前章节，撰写下一章完整正文。' },
 ];
 
-export default function WorkEditor({ workspace, onSend, isLoading, sessionId, selectedKbId, onEnsureSession, onCandidate, onConversationRefresh }) {
+export default function WorkEditor({ workspace, onSend, isLoading, sessionId, knowledgeBaseLabel, onOpenProjectKnowledgeBases, onEnsureSession, onCandidate, onConversationRefresh }) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -55,7 +55,9 @@ export default function WorkEditor({ workspace, onSend, isLoading, sessionId, se
       const source = await onEnsureSession();
       const mode = operations.find((item) => item.value === operation);
       const target = await workspace.prepareTarget(mode.operation || mode.value, source.id, node.id);
-      await onSend(instruction.trim() || mode.fallback, mode.type, true, selectedKbId, [], target.baseDocumentId || '', target);
+      const outcome = await onSend(instruction.trim() || mode.fallback, mode.type, true, [], target.baseDocumentId || '', target);
+      if (outcome === false) return;
+      if (!outcome.accepted) throw new Error(outcome.error);
       setInstruction(''); setNotice('结果将保留为候选，预览采纳后写入正文');
     } catch (failure) { setError(failure.message); }
   };
@@ -122,7 +124,8 @@ export default function WorkEditor({ workspace, onSend, isLoading, sessionId, se
           <div className="work-operation-pills">{operations.map((item) => <button key={item.value} type="button" aria-pressed={operation === item.value} className={operation === item.value ? 'active' : ''}
             onClick={() => setOperation(item.value)}>{item.label}</button>)}</div>
           <textarea aria-label="正文写作要求" placeholder="补充情节、语气或视角要求……" value={instruction} onChange={(event) => setInstruction(event.target.value)} />
-          <div className="work-iteration-footer"><span>保留原文与当前版本，可随时回溯</span><button className="workspace-primary" type="button" disabled={!ready || historical || isLoading || saving || selectionLoading} onClick={iterate}><Sparkles size={14} />生成候选</button></div>
+          <div className="work-iteration-footer"><button className="workspace-action project-kb-trigger" type="button"
+            onClick={onOpenProjectKnowledgeBases}>{knowledgeBaseLabel}</button><button className="workspace-primary" type="button" disabled={!ready || historical || isLoading || saving || selectionLoading} onClick={iterate}><Sparkles size={14} />生成候选</button></div>
         </div>
       </div>
     </div>

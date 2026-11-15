@@ -17,7 +17,7 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
-const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) => {
+const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLabel, onOpenProjectKnowledgeBases }) => {
   const [inputValue, setInputValue] = useState('');
   const [mode, setMode] = useState('AUTO');
   const [webSearch, setWebSearch] = useState(true);
@@ -26,6 +26,7 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const submitting = useRef(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -182,16 +183,21 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
   const handleSubmit = async () => {
     const trimmed = inputValue.trim();
     const hasContent = trimmed || attachments.some((a) => a.id && !a.error);
-    if (!hasContent || isLoading || disabled || isUploading) return;
+    if (!hasContent || isLoading || disabled || isUploading || submitting.current) return;
 
     const attachmentIds = attachments
       .filter((a) => a.id && !a.error)
       .map((a) => a.id);
 
-    const accepted = await onSend(trimmed, mode, webSearch, kbId, attachmentIds);
-    if (accepted === false) return;
-    setInputValue('');
-    setAttachments([]);
+    submitting.current = true;
+    try {
+      const accepted = await onSend(trimmed, mode, webSearch, attachmentIds);
+      if (accepted === false) return;
+      setInputValue((current) => current.trim() === trimmed ? '' : current);
+      setAttachments((current) => current.filter((attachment) => !attachmentIds.includes(attachment.id)));
+    } finally {
+      submitting.current = false;
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -305,18 +311,25 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
             </button>
           ))}
         </div>
-        <button
-          aria-pressed={webSearch}
-          className={`websearch-toggle${webSearch ? ' active' : ''}`}
-          onClick={() => setWebSearch(!webSearch)}
-          type="button"
-          title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
-        >
-          <span className="websearch-toggle-icon">
-            <Globe2 size={13} />
-          </span>
-          <span className="websearch-toggle-label">联网搜索</span>
-        </button>
+        <div className="input-search-options">
+          <button
+            aria-pressed={webSearch}
+            className={`websearch-toggle${webSearch ? ' active' : ''}`}
+            onClick={() => setWebSearch(!webSearch)}
+            type="button"
+            title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
+          >
+            <span className="websearch-toggle-icon">
+              <Globe2 size={13} />
+            </span>
+            <span className="websearch-toggle-label">联网搜索</span>
+          </button>
+          {onOpenProjectKnowledgeBases && (
+            <button className="workspace-action project-kb-trigger" type="button" onClick={onOpenProjectKnowledgeBases}>
+              {knowledgeBaseLabel}
+            </button>
+          )}
+        </div>
       </div>
       <p className="input-hint">Enter 发送 · Shift + Enter 换行</p>
     </div>

@@ -146,18 +146,14 @@ public class StateGraphRunner {
      * @param sessionId   会话 ID
      * @param documentId  文档 ID
      * @param userInput   用户输入（多模态内容）
-     * @param kbId        知识库 ID
+     * @param knowledgeBaseIds 本轮可检索的知识库 ID
      * @param writingType 写作类型（用于兼容旧流程事件类型）
      * @param webSearch   是否启用联网搜索
      */
-    public void run(String sessionId, String documentId, MultimodalContent userInput, String kbId, String writingType, boolean webSearch) {
-        run(sessionId, documentId, userInput, kbId, writingType, webSearch, null);
-    }
-
-    public void run(String sessionId, String documentId, MultimodalContent userInput, String kbId, String writingType, boolean webSearch, WritingTarget target) {
+    public void run(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
         if (writingOutputSettingsService.isParallelChapterWritingEnabled()) {
             log.info("Supervisor 并行写章已开启，跳过会话锁: sessionId={}", sessionId);
-            runSerial(sessionId, documentId, userInput, kbId, writingType, webSearch, target);
+            runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
             return;
         }
 
@@ -169,7 +165,7 @@ public class StateGraphRunner {
             log.info("Supervisor 会话锁已获取: sessionId={}, waitMs={}", sessionId, waitMs);
         }
         try {
-            runSerial(sessionId, documentId, userInput, kbId, writingType, webSearch, target);
+            runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
         } finally {
             lock.unlock();
             if (!lock.hasQueuedThreads()) {
@@ -178,7 +174,7 @@ public class StateGraphRunner {
         }
     }
 
-    private void runSerial(String sessionId, String documentId, MultimodalContent userInput, String kbId, String writingType, boolean webSearch, WritingTarget target) {
+    private void runSerial(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
         sseService.startRun(sessionId);
         log.info("Supervisor 执行开始: sessionId={}, type={}, webSearch={}", sessionId, writingType, webSearch);
         publishStatus(sessionId, "【任务启动】开始处理用户请求...");
@@ -200,7 +196,7 @@ public class StateGraphRunner {
             inputs.put("documentId", selectedDocument != null ? selectedDocument.getId() : "");
             inputs.put("userInput", userInput.getTextOnly());
             inputs.put("multimodalContent", userInput);
-            inputs.put("kbId", kbId != null ? kbId : "");
+            inputs.put("knowledgeBaseIds", knowledgeBaseIds == null ? List.of() : List.copyOf(knowledgeBaseIds));
             inputs.put("writingType", writingType != null ? writingType : "AUTO");
             inputs.put("context", context);
             inputs.put("finalOutput", "");

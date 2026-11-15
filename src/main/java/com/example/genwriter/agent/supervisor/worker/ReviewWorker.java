@@ -143,7 +143,7 @@ public class ReviewWorker implements WorkerAgent {
                     .user(userPrompt);
 
             promptSpec = AgentToolSupport.applyToolVisibility(
-                    promptSpec, webSearchEnabled, false);
+                    promptSpec, webSearchEnabled, List.of());
 
             promptSpec = promptSpec.advisors(new MessageChatMemoryAdvisor(chatMemory))
                     .advisors(a -> a.param(

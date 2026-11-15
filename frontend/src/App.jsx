@@ -157,7 +157,6 @@ function App() {
   const [hasContentStarted, setHasContentStarted] = useState(false);
   const [view, setView] = useState('chat');
   const [exportDialogMessage, setExportDialogMessage] = useState(null);
-  const [selectedKbId] = useState('');
   const [documentRefresh, setDocumentRefresh] = useState({ token: 0, documentId: '' });
   const [conversationRevision, setConversationRevision] = useState(0);
   const workspace = useWorkspace(activeProject?.id, documentRefresh.token);
@@ -343,7 +342,7 @@ function App() {
   }, [messages, activeSession?.id]);
 
   const handleSend = useCallback(
-    async (content, mode = 'AUTO', webSearch = true, kbId = '', attachmentIds = [], documentId = '', target) => {
+    async (content, mode = 'AUTO', webSearch = true, attachmentIds = [], documentId = '', target) => {
       if (isLoading) return false;
       let session;
       try {
@@ -401,30 +400,33 @@ function App() {
         },
       ]);
 
-      const doChat = async () => {
-        try {
-          await messagesApi.chat(sessionId, content, mode, webSearch, kbId || selectedKbId, attachmentIds, documentId, target);
-        } catch (e) {
-          runningSessionRef.current = null;
-          setIsLoading(false);
-          setError('触发聊天失败: ' + e.message);
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId
-                ? { ...m, content: '服务暂时不可用，请重试。' }
-                : m
-            )
-          );
-          if (abortRef.current) {
-            abortRef.current();
-            abortRef.current = null;
-          }
+      let settleAcceptance;
+      const acceptance = new Promise((resolve) => { settleAcceptance = resolve; });
+      let accepted = false;
+      let failed = false;
+      const failBeforeAcceptance = (failure) => {
+        if (failed) return;
+        failed = true;
+        runningSessionRef.current = null;
+        setIsLoading(false);
+        setMessages((prev) => prev.filter((message) => message.id !== userMsg.id && message.id !== assistantMsgId));
+        if (abortRef.current) {
+          abortRef.current();
+          abortRef.current = null;
         }
+        settleAcceptance({ accepted: false, error: failure.message });
       };
 
-      abortRef.current = connectSSE(sessionId, {
-        onOpen: () => {
-          doChat();
+      const closeStream = connectSSE(sessionId, {
+        onOpen: async () => {
+          try {
+            await messagesApi.chat(sessionId, content, mode, webSearch, attachmentIds, documentId, target);
+            if (failed) return;
+            accepted = true;
+            settleAcceptance({ accepted: true });
+          } catch (failure) {
+            failBeforeAcceptance(failure);
+          }
         },
         onMessage: (channelMsg) => {
           const { payload, completed } = channelMsg;
@@ -591,13 +593,15 @@ function App() {
                   : m
               )
             );
-            if (abortRef.current) {
-              abortRef.current();
-              abortRef.current = null;
-            }
+            closeStream();
+            abortRef.current = null;
           }
         },
         onError: (err) => {
+          if (!accepted) {
+            failBeforeAcceptance(err);
+            return;
+          }
           runningSessionRef.current = null;
           setIsLoading(false);
           setError('流式响应出错: ' + (err?.message || ''));
@@ -635,8 +639,16 @@ function App() {
           }
         },
       });
+      abortRef.current = () => {
+        closeStream();
+        if (!accepted && !failed) {
+          failed = true;
+          settleAcceptance(false);
+        }
+      };
+      return acceptance;
     },
-    [ensureSession, isLoading, selectedKbId]
+    [ensureSession, isLoading]
   );
 
   const handleSelectProject = useCallback(async (project) => {
@@ -826,7 +838,8 @@ function App() {
             hasContentStarted={hasContentStarted}
             loadingMessages={loadingMessages}
             isSessionLoading={isSessionLoading}
-            selectedKbId={selectedKbId}
+            visible={view === 'chat'}
+            onOpenKnowledgeBases={() => setView('knowledge-bases')}
             sessionId={activeSession?.id || ''}
             documentRefresh={documentRefresh}
           />

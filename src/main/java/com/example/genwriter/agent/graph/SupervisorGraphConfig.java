@@ -27,7 +27,7 @@ public class SupervisorGraphConfig {
                 .defaultStrategy(KeyStrategy.REPLACE)
                 .addStrategy("userInput", KeyStrategy.REPLACE)
                 .addStrategy("sessionId", KeyStrategy.REPLACE)
-                .addStrategy("kbId", KeyStrategy.REPLACE)
+                .addStrategy("knowledgeBaseIds", KeyStrategy.REPLACE)
                 .addStrategy("intent", KeyStrategy.REPLACE)
                 .addStrategy("writingType", KeyStrategy.REPLACE)
                 .addStrategy("writingGenre", KeyStrategy.REPLACE)

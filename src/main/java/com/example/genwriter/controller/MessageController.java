@@ -1,6 +1,9 @@
 package com.example.genwriter.controller;
 
 import com.example.genwriter.event.ChatEvent;
+import com.example.genwriter.exception.BizException;
+import com.example.genwriter.model.dto.workspace.WorkspaceModels.WritingTarget;
+import com.example.genwriter.service.ProjectKnowledgeBaseService;
 import com.example.genwriter.model.common.ApiResponse;
 import com.example.genwriter.model.dto.MultimodalContent;
 import com.example.genwriter.model.dto.request.ChatRequest;
@@ -31,6 +34,7 @@ public class MessageController {
     private final MessageService messageService;
     private final ChatService chatService;
     private final FileStorageService fileStorageService;
+    private final ProjectKnowledgeBaseService projectKnowledgeBases;
     private final com.example.genwriter.service.WorkspaceService workspaceService;
 
     /**
@@ -45,7 +49,7 @@ public class MessageController {
 
     /**
      * 发送消息并触发 AI 响应（SSE 流式模式）
-     * 前端需要先建立 SSE 连接：GET /sse/connect/{sessionId}
+     * 前端需要先建立 SSE 连接：GET /sse/subscribe/{sessionId}
      * 然后调用此接口触发 AI 响应，结果会通过 SSE 推送
      */
     @PostMapping("/{sessionId}/chat")
@@ -58,14 +62,27 @@ public class MessageController {
         String documentId = request != null ? request.getDocumentId() : null;
         log.debug("聊天请求：sessionId={}, type={}, webSearch={}, kbId={}, documentId={}",
                 sessionId, type, webSearch, kbId, documentId);
+        List<String> knowledgeBaseIds = projectKnowledgeBases.resolveForChat(sessionId, kbId);
+        WritingTarget requested = request != null ? request.getTarget() : null;
+        if (type == ChatEvent.WritingType.KNOWLEDGE_QA) {
+            if (request == null || request.getText() == null || request.getText().isBlank()) {
+                throw new BizException("400", "请先输入要检索的问题");
+            }
+            if (knowledgeBaseIds.isEmpty()) {
+                throw new BizException("400", "请先为当前项目选择参考知识库");
+            }
+            if (requested != null) {
+                requested = new WritingTarget(requested.projectId(), requested.nodeId(), "DISCUSS", null, null, null);
+            }
+        }
         MultimodalContent content;
         if (request != null) {
             content = request.toMultimodalContent(sessionId, fileStorageService);
         } else {
             content = MultimodalContent.ofText("");
         }
-        var target = workspaceService.prepareTarget(sessionId, request != null ? request.getTarget() : null, documentId);
-        chatService.submitChatTask(sessionId, documentId, content, type, webSearch, kbId, target);
+        var target = workspaceService.prepareTarget(sessionId, requested, documentId);
+        chatService.submitChatTask(sessionId, documentId, content, type, webSearch, knowledgeBaseIds, target);
         return ApiResponse.success(null);
     }
 

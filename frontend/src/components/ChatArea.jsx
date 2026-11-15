@@ -24,7 +24,7 @@ const readSavedCollapsed = () => {
   return window.localStorage.getItem(WORKBENCH_COLLAPSED_KEY) === 'true';
 };
 
-const ChatArea = ({ messages, onSend, onSuggestionClick, onExport, isLoading, hasContentStarted, isSessionLoading, selectedKbId = '', sessionId = '', documentRefresh }) => {
+const ChatArea = ({ messages, onSend, onSuggestionClick, onExport, isLoading, hasContentStarted, isSessionLoading, sessionId = '', documentRefresh }) => {
   const messagesEndRef = useRef(null);
   const [workbenchWidth, setWorkbenchWidth] = useState(readSavedWorkbenchWidth);
   const [workbenchCollapsed, setWorkbenchCollapsed] = useState(readSavedCollapsed);
@@ -111,7 +111,7 @@ const ChatArea = ({ messages, onSend, onSuggestionClick, onExport, isLoading, ha
             <div ref={messagesEndRef} />
           </div>
         )}
-        <InputBox onSend={onSend} disabled={isSessionLoading} isLoading={isLoading} kbId={selectedKbId} sessionId={sessionId} />
+        <InputBox onSend={onSend} disabled={isSessionLoading} isLoading={isLoading} sessionId={sessionId} />
       </div>
       {!workbenchCollapsed && (
         <button
@@ -126,7 +126,6 @@ const ChatArea = ({ messages, onSend, onSuggestionClick, onExport, isLoading, ha
       <WritingWorkbench
         sessionId={sessionId}
         isLoading={isLoading}
-        selectedKbId={selectedKbId}
         documentRefresh={documentRefresh}
         onIterate={onSend}
         collapsed={workbenchCollapsed}

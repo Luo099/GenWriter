@@ -1557,3 +1557,16 @@ summary:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+.input-search-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.workspace-chat-pane .input-search-options .websearch-toggle {
+  width: auto;
+  margin: 0;
+}

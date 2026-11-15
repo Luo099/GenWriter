@@ -1,5 +1,7 @@
 package com.example.genwriter.agent.supervisor;
 
+import com.example.genwriter.agent.tool.AgentToolSupport;
+
 import com.example.genwriter.agent.skill.SkillService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -54,7 +56,7 @@ public class SupervisorSystemPromptProvider {
 
                 ## 推荐流程
                 - 新写作任务(需外部数据): intent_recognition -> researcher -> outline -> draft -> polish -> review
-                - 新写作任务(有kbId): intent_recognition -> researcher -> outline -> draft -> polish -> review（researcher 会优先检索知识库，再补充网络搜索）
+                - 新写作任务(需要参考知识库资料): intent_recognition -> researcher -> outline -> draft -> polish -> review（researcher 会优先检索知识库，再补充网络搜索）
                 - 新写作任务(无需外部数据): intent_recognition -> outline -> draft -> polish -> review
                 - 纯调研任务: intent_recognition -> researcher -> direct_answer
                 - 评审结果 REVISE_DRAFT: 回到 draft
@@ -62,7 +64,7 @@ public class SupervisorSystemPromptProvider {
                 - 评审结果 PASS: FINISH，将 polishedContent 作为 finalOutput
                 - 简单问答: intent_recognition -> direct_answer
                 - 润色任务: intent_recognition -> polish
-                - 知识库问答(有kbId，非写作): intent_recognition -> direct_answer（DirectAnswerWorker 内部自主调用知识库搜索）
+                - 需要参考资料的问答: intent_recognition -> direct_answer（DirectAnswerWorker 内部自主调用知识库搜索）
 
                 ## 规则
                 - 一次性制定完整计划，不要逐步决策
@@ -117,12 +119,12 @@ public class SupervisorSystemPromptProvider {
 
                 ## 推荐流程（软引导，可按状态灵活调整）
                 - 新写作任务(需外部数据): intent_recognition -> researcher -> outline -> draft -> polish -> review -> finish
-                - 新写作任务(有kbId): intent_recognition -> researcher -> outline -> draft -> polish -> review -> finish
+                - 新写作任务(需要参考知识库资料): intent_recognition -> researcher -> outline -> draft -> polish -> review -> finish
                 - 新写作任务(无需外部数据): intent_recognition -> outline -> draft -> polish -> review -> finish
                 - 纯调研任务: intent_recognition -> researcher -> direct_answer -> finish
                 - 简单问答: intent_recognition -> direct_answer -> finish
                 - 润色任务: intent_recognition -> polish -> review -> finish
-                - 知识库问答(有kbId，非写作): intent_recognition -> direct_answer -> finish
+                - 需要参考资料的问答: intent_recognition -> direct_answer -> finish
                 - 评审结果 REVISE_DRAFT: 下一步回到 draft 重写正文；draft 执行后系统会自动衔接 polish 与下一次 review，只需决策这一次 draft，不要连续重选 draft
                 - 评审结果 REVISE_POLISH: 下一步回到 polish 重写润色稿；polish 执行后系统会自动衔接下一次 review，PASS 后才能 finish
                 - 评审结果 PASS: 下一步 finish
@@ -149,7 +151,7 @@ public class SupervisorSystemPromptProvider {
         StringBuilder sb = new StringBuilder();
         sb.append("## 当前状态\n");
         sb.append("- userInput: ").append(truncate(asString(state.getOrDefault("userInput", "")), 500)).append("\n");
-        sb.append("- kbId: ").append(state.getOrDefault("kbId", "")).append("\n");
+        sb.append("- hasKnowledgeBases: ").append(!AgentToolSupport.knowledgeBaseIds(state).isEmpty()).append("\n");
         sb.append("- writingGenre: ").append(state.getOrDefault("writingGenre", "UNKNOWN"))
                 .append(" (").append(state.getOrDefault("genreLabel", "通用写作")).append(")\n");
         sb.append("- outputFormat: ").append(state.getOrDefault("outputFormat", "markdown")).append("\n");

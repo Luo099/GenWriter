@@ -38,7 +38,7 @@ public class ChatEventListener {
                     event.getSessionId(),
                     event.getDocumentId(),
                     event.getUserInput(),
-                    event.getKbId(),
+                    event.getKnowledgeBaseIds(),
                     event.getType() != null ? event.getType().name() : "AUTO",
                     event.isWebSearch(),
                     event.getTarget()

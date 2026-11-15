@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { X } from 'lucide-react';
 import { getDocument } from '../api/documents';
+import { getAllKnowledgeBases } from '../api/knowledgeBases';
+import { getProjectKnowledgeBases, replaceProjectKnowledgeBases } from '../api/projects';
 import * as api from '../api/workspace';
 import SelectField from './SelectField';
 
@@ -31,6 +33,90 @@ export function WorkspaceModal({ title, onClose, children, footer, wide = false 
       {footer && <footer className="workspace-dialog-actions">{footer}</footer>}
     </section>
   </div>;
+}
+
+export function ProjectKnowledgeBasesDialog({ project, onClose, onManage, onSaved }) {
+  const [libraries, setLibraries] = useState(null);
+  const [checked, setChecked] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const active = useRef(false);
+
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getAllKnowledgeBases(), getProjectKnowledgeBases(project.id)])
+      .then(([available, { knowledgeBaseIds }]) => {
+        if (cancelled) return;
+        setLibraries(available);
+        setChecked(knowledgeBaseIds);
+      })
+      .catch((failure) => { if (!cancelled) setError(failure.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [project.id, loadAttempt]);
+
+  const toggle = (id) => setChecked((ids) => ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const { knowledgeBaseIds } = await replaceProjectKnowledgeBases(project.id, checked);
+      if (active.current) onSaved(knowledgeBaseIds);
+    } catch (failure) {
+      if (active.current) {
+        setError(failure.message);
+        getAllKnowledgeBases().then((available) => {
+          if (active.current) setLibraries(available);
+        }).catch(() => {});
+      }
+    } finally {
+      if (active.current) setSaving(false);
+    }
+  };
+  const availableIds = new Set(libraries?.map((library) => library.id));
+  const missingIds = checked.filter((id) => !availableIds.has(id));
+  const filtered = libraries?.filter(({ name }) => name.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
+
+  return <WorkspaceModal title="参考知识库" onClose={() => { if (!saving) onClose(); }} footer={<>
+    <button type="button" onClick={onClose} disabled={saving}>取消</button>
+    <button className="workspace-primary" type="button" disabled={!libraries || saving || missingIds.length > 0}
+      onClick={save}>{saving ? '保存中…' : '保存'}</button>
+  </>}>
+    <p>用于当前项目「{project.name}」的后续会话和继续创作。</p>
+    {error && <p className="workspace-error" role="alert">{error}</p>}
+    {loading && <p role="status">正在加载知识库…</p>}
+    {!loading && !libraries && <button className="workspace-action" type="button" onClick={() => {
+      setError(''); setLoading(true); setLoadAttempt((attempt) => attempt + 1);
+    }}>重试</button>}
+    {libraries?.length === 0 && <div className="project-kb-empty">
+      <p>暂无可选知识库。</p><button className="workspace-action" type="button" onClick={onManage}>前往知识库</button>
+    </div>}
+    {libraries?.length > 0 && <>
+      <input className="project-kb-filter" aria-label="按名称筛选知识库" placeholder="按名称筛选" value={filter}
+        onChange={(event) => setFilter(event.target.value)} />
+      {filtered.length === 0 && <p className="workspace-muted">没有匹配的知识库。</p>}
+      <ul className="project-kb-list" aria-label="可选知识库">
+        {filtered.map((library) => <li key={library.id}>
+          <label><input type="checkbox" checked={checked.includes(library.id)} disabled={saving}
+            onChange={() => toggle(library.id)} />
+            <span><strong>{library.name}</strong>{library.description && <small>{library.description}</small>}</span>
+          </label>
+        </li>)}
+      </ul>
+    </>}
+    {missingIds.length > 0 && libraries && <button className="workspace-action" type="button"
+      onClick={() => setChecked((ids) => ids.filter((id) => availableIds.has(id)))}>
+      移除 {missingIds.length} 个已删除的知识库
+    </button>}
+  </WorkspaceModal>;
 }
 
 export function CandidateDialog({ candidate, workspace, onClose }) {

@@ -4,6 +4,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ToolContext;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ public final class AgentToolSupport {
 
     public static final String WEB_SEARCH = "web_search";
     public static final String KNOWLEDGE_BASE_SEARCH = "knowledge_base_search";
+    public static final String KNOWLEDGE_BASE_IDS = "knowledgeBaseIds";
     public static final String WEB_SEARCH_ENABLED = "webSearchEnabled";
     public static final String SESSION_ID = "sessionId";
     public static final String CURRENT_SPAN_ID = "currentSpanId";
@@ -29,19 +31,31 @@ public final class AgentToolSupport {
     public static ChatClient.ChatClientRequestSpec applyToolVisibility(
             ChatClient.ChatClientRequestSpec promptSpec,
             boolean webSearchEnabled,
-            boolean knowledgeBaseSearchVisible) {
+            List<String> knowledgeBaseIds) {
 
         List<String> toolNames = new ArrayList<>();
         if (webSearchEnabled) {
             toolNames.add(WEB_SEARCH);
         }
-        if (knowledgeBaseSearchVisible) {
+        if (!knowledgeBaseIds.isEmpty()) {
             toolNames.add(KNOWLEDGE_BASE_SEARCH);
         }
         if (!toolNames.isEmpty()) {
             promptSpec = promptSpec.tools(toolNames.toArray(new String[0]));
         }
-        return promptSpec.toolContext(Map.of(WEB_SEARCH_ENABLED, webSearchEnabled));
+        Map<String, Object> toolContext = new HashMap<>(sessionContext(
+                SessionContextHolder.get(), SessionContextHolder.getCurrentSpanId(),
+                SessionContextHolder.getCurrentAgentName()));
+        toolContext.put(WEB_SEARCH_ENABLED, webSearchEnabled);
+        toolContext.put(KNOWLEDGE_BASE_IDS, knowledgeBaseIds);
+        return promptSpec.toolContext(toolContext);
+    }
+
+    public static List<String> knowledgeBaseIds(Map<?, ?> state) {
+        if (!(state.get(KNOWLEDGE_BASE_IDS) instanceof List<?> ids)) {
+            return List.of();
+        }
+        return ids.stream().filter(String.class::isInstance).map(String.class::cast).toList();
     }
 
     public static ChatClient.ChatClientRequestSpec applySessionContext(

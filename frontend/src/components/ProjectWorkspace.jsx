@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BookOpen, Bot, Download, LayoutPanelLeft, Plus, X, PanelRightOpen } from 'lucide-react';
@@ -7,13 +7,41 @@ import WorkEditor from './WorkEditor';
 import MessageBubble from './MessageBubble';
 import InputBox from './InputBox';
 import SelectField from './SelectField';
-import { CandidateDialog, LegacyDialog, WorkExportDialog, WorkspaceModal } from './WorkspaceDialogs';
+import { CandidateDialog, LegacyDialog, ProjectKnowledgeBasesDialog, WorkExportDialog, WorkspaceModal } from './WorkspaceDialogs';
 import { getReading } from '../api/workspace';
+import { getProjectKnowledgeBases } from '../api/projects';
 
 const operations = [ ['DISCUSS', '自由讨论，不写入正文'], ['REPLACE', '修改当前节点'], ['APPEND', '续写本节'], ['CREATE_NODE', '新增章节'] ];
 
 export default function ProjectWorkspace({ project, workspace, sessions, activeSession, messages, onSend, onEnsureSession,
-  onSelectSession, onNewChat, onNewProject, onExport, onConversationRefresh, isLoading, hasContentStarted, isSessionLoading, selectedKbId }) {
+  onSelectSession, onNewChat, onNewProject, onExport, onConversationRefresh, isLoading, hasContentStarted, isSessionLoading, visible, onOpenKnowledgeBases }) {
+  const [selection, setSelection] = useState(null);
+  const [knowledgeBasesProject, setKnowledgeBasesProject] = useState(null);
+  const selectionRequest = useRef(0);
+  const currentProjectId = useRef(null);
+  const projectId = project?.id;
+  const selectionForProject = selection?.projectId === projectId ? selection : null;
+  const knowledgeBaseIds = selectionForProject?.ids;
+  const knowledgeBaseLabel = !knowledgeBaseIds ? '参考知识库'
+    : knowledgeBaseIds.length ? `参考知识库 · ${knowledgeBaseIds.length} 个` : '参考知识库 · 未设置';
+  const openProjectKnowledgeBases = () => setKnowledgeBasesProject(projectId);
+  const closeProjectKnowledgeBases = () => setKnowledgeBasesProject(null);
+
+  const refreshKnowledgeBases = useCallback(async () => {
+    if (!projectId) return undefined;
+    const request = ++selectionRequest.current;
+    try {
+      const { knowledgeBaseIds: ids } = await getProjectKnowledgeBases(projectId);
+      if (request !== selectionRequest.current) return undefined;
+      setSelection({ projectId, ids });
+      return ids;
+    } catch (failure) {
+      if (request !== selectionRequest.current) return undefined;
+      setSelection({ projectId, ids: undefined });
+      throw failure;
+    }
+  }, [projectId]);
+
   const [operation, setOperation] = useState('DISCUSS');
   const [candidate, setCandidate] = useState(null);
   const [candidateList, setCandidateList] = useState(false);
@@ -44,14 +72,46 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
   useEffect(() => () => resizeCleanup.current?.(), []);
   useEffect(() => { setCandidate(null); setCandidateList(false); setExportOpen(false); setLocalError(''); setMobileAssistant(false); }, [project?.id]);
 
-  const send = async (content, type, webSearch, kbId, attachments) => {
+  useEffect(() => {
+    currentProjectId.current = visible ? projectId : null;
+    if (!visible || !projectId) return undefined;
+    refreshKnowledgeBases().catch(() => {});
+    return () => { selectionRequest.current += 1; currentProjectId.current = null; };
+  }, [visible, projectId, refreshKnowledgeBases]);
+  useEffect(() => { setKnowledgeBasesProject(null); }, [projectId, visible]);
+
+  const send = async (content, type, webSearch, attachments) => {
     try {
       setLocalError('');
-      if (!project) return await onSend(content, type, webSearch, kbId, attachments);
+      const knowledgeQa = type === 'KNOWLEDGE_QA';
+      if (knowledgeQa) {
+        if (!content.trim()) throw new Error('请先输入要检索的问题');
+        const ids = await refreshKnowledgeBases();
+        if (!ids) return false;
+        if (ids.length === 0) {
+          openProjectKnowledgeBases();
+          return false;
+        }
+      }
       const session = await onEnsureSession();
-      const target = await workspace.prepareTarget(operation, session.id);
-      return await onSend(content, type, webSearch, kbId, attachments, target.baseDocumentId || '', target);
-    } catch (failure) { setLocalError(failure.message); return false; }
+      if (currentProjectId.current !== projectId || session.projectId !== projectId) return false;
+      const target = await workspace.prepareTarget(knowledgeQa ? 'DISCUSS' : operation, session.id);
+      if (currentProjectId.current !== projectId) return false;
+      const outcome = await onSend(content, type, webSearch, attachments, target.baseDocumentId || '', target);
+      if (outcome === false) return false;
+      if (!outcome.accepted) {
+        if (currentProjectId.current !== projectId) return false;
+        if (knowledgeQa) {
+          const ids = await refreshKnowledgeBases().catch(() => undefined);
+          if (ids?.length === 0) openProjectKnowledgeBases();
+        }
+        throw new Error(outcome.error);
+      }
+      return true;
+    } catch (failure) {
+      if (currentProjectId.current === projectId) setLocalError(failure.message);
+      return false;
+    }
   };
 
   const resize = (event) => {
@@ -75,7 +135,8 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
 
   return <section className={`project-workspace mode-${workspace.mode} view-${view}${workspace.assistantCollapsed ? ' assistant-collapsed' : ''}${mobileAssistant ? ' mobile-assistant' : ''}`}
     style={{ '--assistant-width': `${workspace.widths?.[workspace.mode] || 360}px` }} ref={containerRef}>
-    <header className="workspace-header"><div className="workspace-project-title"><BookOpen size={17} /><h1 title={project.name}>{project.name}</h1></div>
+    <header className="workspace-header"><div className="workspace-project-title"><BookOpen size={17} /><h1 title={project.name}>{project.name}</h1>
+      <button className="workspace-action project-kb-trigger" type="button" onClick={openProjectKnowledgeBases}>{knowledgeBaseLabel}</button></div>
       <nav className="workspace-mode-switch" aria-label="工作区模式"><button type="button" aria-pressed={workspace.mode === 'agent'} onClick={() => workspace.preferences({ mode: 'agent' })}><Bot size={15} />智能体</button>
         <button type="button" aria-pressed={workspace.mode === 'studio'} onClick={() => workspace.preferences({ mode: 'studio' })}><LayoutPanelLeft size={15} />创作台</button></nav>
       {workspace.mode === 'agent' && <nav className="workspace-view-switch" aria-label="智能体主区">{[['chat', '会话'], ['document', '正文'], ['reading', '全文']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => setView(value)}>{label}</button>)}</nav>}
@@ -88,7 +149,8 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
     </header>
     {(workspace.error || localError) && <div className="workspace-error-banner" role="alert">{workspace.error || localError}<button type="button" aria-label="关闭错误提示" onClick={() => { workspace.patch({ error: '' }); setLocalError(''); }}><X size={15} /></button></div>}
     <div className="workspace-panels">
-      <div className="workspace-editor-pane"><WorkEditor workspace={workspace} onSend={onSend} isLoading={isLoading} sessionId={activeSession?.id} selectedKbId={selectedKbId}
+      <div className="workspace-editor-pane"><WorkEditor workspace={workspace} onSend={onSend} isLoading={isLoading} sessionId={activeSession?.id} knowledgeBaseLabel={knowledgeBaseLabel}
+        onOpenProjectKnowledgeBases={openProjectKnowledgeBases}
         onEnsureSession={onEnsureSession} onCandidate={setCandidate} onConversationRefresh={onConversationRefresh} /></div>
       <section className="workspace-reading-pane" aria-label="全文阅读"><header><span className="workspace-kicker">全文阅读 · 已保存正文</span><h2>{reading.title || project.name}</h2></header>
         {Object.values(workspace.drafts).some((draft) => draft.dirty) && <p className="workspace-notice">部分修改尚未保存，当前全文按已保存快照展示。</p>}
@@ -118,10 +180,18 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
         <div className="workspace-task-target"><label htmlFor="workspace-task-target">本次写入目标</label><SelectField id="workspace-task-target" aria-label="本次写入目标" value={visibleOperation} disabled={isLoading} onChange={setOperation}
           options={operations.map(([value, label]) => ({ value, label }))} />
           {visibleOperation !== 'DISCUSS' && <span title={visibleTarget?.title}>{visibleTarget?.title || '请先选择正文节点'} · {visibleOperation === 'CREATE_NODE' ? '采纳时新建章节' : '采纳后更新正文'}</span>}</div>
-        <InputBox onSend={send} disabled={isSessionLoading || workspace.loading} isLoading={isLoading} sessionId={activeSession?.id || ''} kbId={selectedKbId} />
+        <InputBox onSend={send} disabled={isSessionLoading || workspace.loading} isLoading={isLoading} sessionId={activeSession?.id || ''} knowledgeBaseLabel={knowledgeBaseLabel} onOpenProjectKnowledgeBases={openProjectKnowledgeBases} />
       </aside>
       {workspace.mode === 'studio' && workspace.assistantCollapsed && <button className="workspace-assistant-rail" type="button" aria-label="展开创作助手" onClick={() => workspace.preferences({ assistantCollapsed: false })}><PanelRightOpen size={18} /><span>创作助手</span>{pending.length > 0 && <span>{pending.length}</span>}</button>}
     </div>
+    {visible && knowledgeBasesProject === projectId && <ProjectKnowledgeBasesDialog key={projectId} project={project}
+      onClose={closeProjectKnowledgeBases}
+      onManage={() => { closeProjectKnowledgeBases(); onOpenKnowledgeBases(); }}
+      onSaved={(ids) => {
+        selectionRequest.current += 1;
+        setSelection({ projectId, ids });
+        closeProjectKnowledgeBases();
+      }} />}
     {candidate && <CandidateDialog key={candidate.id} candidate={candidate} workspace={workspace} onClose={() => setCandidate(null)} />}
     {candidateList && <WorkspaceModal title="作品候选" wide onClose={() => setCandidateList(false)}>
       {!workspace.candidates.length && <p className="workspace-muted">生成正文后，候选会出现在这里。</p>}

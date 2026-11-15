@@ -39,6 +39,11 @@ public class WorkspaceSchemaInitializer implements InitializingBean {
                 if (restoreTimestampTrigger) jdbc.execute("ALTER TABLE document ENABLE " + ("A".equals(triggerMode) ? "ALWAYS " : "") + "TRIGGER update_document_updated_at");
                 jdbc.update("INSERT INTO genwriter_schema_migration(version) VALUES (?)", version);
             }
+            String knowledgeBaseVersion = "20261113-project-knowledge-bases-v1";
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM genwriter_schema_migration WHERE version = ?", Integer.class, knowledgeBaseVersion) == 0) {
+                new ResourceDatabasePopulator(new ClassPathResource("db/project-knowledge-bases.sql")).execute(jdbc.getDataSource());
+                jdbc.update("INSERT INTO genwriter_schema_migration(version) VALUES (?)", knowledgeBaseVersion);
+            }
         });
     }
 }

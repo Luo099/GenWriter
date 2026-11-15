@@ -9,3 +9,9 @@ export const createProject = (data) => client.post('/projects', data);
 export const updateProject = (id, data) => client.put(`/projects/${id}`, data);
 
 export const deleteProject = (id) => client.delete(`/projects/${id}`);
+
+export const getProjectKnowledgeBases = (projectId) =>
+  client.get(`/projects/${projectId}/knowledge-bases`);
+
+export const replaceProjectKnowledgeBases = (projectId, knowledgeBaseIds) =>
+  client.put(`/projects/${projectId}/knowledge-bases`, { knowledgeBaseIds });

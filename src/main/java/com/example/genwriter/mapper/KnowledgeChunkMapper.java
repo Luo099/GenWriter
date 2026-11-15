@@ -84,24 +84,25 @@ public interface KnowledgeChunkMapper extends BaseMapper<KnowledgeChunk> {
      * 使用PostgreSQL pgvector的<=>操作符计算余弦距离
      * 仅检索与查询向量同一 embedding_model 的行，避免跨模型向量混算
      *
-     * @param kbId 知识库ID
+     * @param knowledgeBaseIds 知识库 ID 列表
      * @param vectorLiteral 向量字符串表示
      * @param embeddingModel 查询向量所用的嵌入模型
      * @param limit 返回结果数量限制
      * @return 相似的知识片段列表
      */
-    @Select("SELECT id, kb_id AS kbId, source_id AS sourceId, content, " +
+    @Select("<script>SELECT id, kb_id AS kbId, source_id AS sourceId, content, " +
             "embedding, embedding_dimension AS embeddingDimension, embedding_model AS embeddingModel, " +
             "metadata::text AS metadata, created_at::timestamp AS createdAt, updated_at::timestamp AS updatedAt " +
-            "FROM knowledge_chunk WHERE kb_id = CAST(#{kbId} AS uuid) " +
+            "FROM knowledge_chunk WHERE kb_id IN " +
+            "<foreach collection='knowledgeBaseIds' item='id' open='(' separator=',' close=')'>CAST(#{id} AS uuid)</foreach> " +
             "AND embedding_model = #{embeddingModel} " +
-            "ORDER BY embedding <=> CAST(#{vectorLiteral} AS vector) " +
-            "LIMIT #{limit}")
+            "ORDER BY embedding &lt;=&gt; CAST(#{vectorLiteral} AS vector) " +
+            "LIMIT #{limit}</script>")
     @Results({
             @Result(property = "embedding", column = "embedding", 
                     typeHandler = PgVectorTypeHandler.class, jdbcType = JdbcType.OTHER)
     })
-    List<KnowledgeChunk> similaritySearch(@Param("kbId") String kbId, 
+    List<KnowledgeChunk> similaritySearchInBases(@Param("knowledgeBaseIds") List<String> knowledgeBaseIds,
                                           @Param("vectorLiteral") String vectorLiteral, 
                                           @Param("embeddingModel") String embeddingModel,
                                           @Param("limit") int limit);
@@ -111,27 +112,28 @@ public interface KnowledgeChunkMapper extends BaseMapper<KnowledgeChunk> {
      * 阈值语义为余弦距离(1 - 余弦相似度),由调用方通过 1 - similarityThreshold 转换得到
      * 仅检索与查询向量同一 embedding_model 的行，避免跨模型向量混算
      *
-     * @param kbId 知识库ID
+     * @param knowledgeBaseIds 知识库 ID 列表
      * @param vectorLiteral 向量字符串表示
      * @param embeddingModel 查询向量所用的嵌入模型
      * @param threshold 余弦距离阈值(越小越相似,0=完全相同)
      * @param limit 返回结果数量限制
      * @return 相似的知识片段列表
      */
-    @Select("SELECT id, kb_id AS kbId, source_id AS sourceId, content, " +
+    @Select("<script>SELECT id, kb_id AS kbId, source_id AS sourceId, content, " +
             "embedding, embedding_dimension AS embeddingDimension, embedding_model AS embeddingModel, " +
             "metadata::text AS metadata, created_at::timestamp AS createdAt, updated_at::timestamp AS updatedAt, " +
-            "embedding <=> CAST(#{vectorLiteral} AS vector) AS distance " +
-            "FROM knowledge_chunk WHERE kb_id = CAST(#{kbId} AS uuid) " +
+            "embedding &lt;=&gt; CAST(#{vectorLiteral} AS vector) AS distance " +
+            "FROM knowledge_chunk WHERE kb_id IN " +
+            "<foreach collection='knowledgeBaseIds' item='id' open='(' separator=',' close=')'>CAST(#{id} AS uuid)</foreach> " +
             "AND embedding_model = #{embeddingModel} " +
-            "AND embedding <=> CAST(#{vectorLiteral} AS vector) < #{threshold} " +
-            "ORDER BY embedding <=> CAST(#{vectorLiteral} AS vector) " +
-            "LIMIT #{limit}")
+            "AND embedding &lt;=&gt; CAST(#{vectorLiteral} AS vector) &lt; #{threshold} " +
+            "ORDER BY embedding &lt;=&gt; CAST(#{vectorLiteral} AS vector) " +
+            "LIMIT #{limit}</script>")
     @Results({
             @Result(property = "embedding", column = "embedding", 
                     typeHandler = PgVectorTypeHandler.class, jdbcType = JdbcType.OTHER)
     })
-    List<KnowledgeChunk> similaritySearchWithThreshold(@Param("kbId") String kbId, 
+    List<KnowledgeChunk> similaritySearchInBasesWithThreshold(@Param("knowledgeBaseIds") List<String> knowledgeBaseIds,
                                                        @Param("vectorLiteral") String vectorLiteral,
                                                        @Param("embeddingModel") String embeddingModel,
                                                        @Param("threshold") double threshold, 

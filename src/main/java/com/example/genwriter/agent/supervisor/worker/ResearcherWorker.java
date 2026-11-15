@@ -74,7 +74,7 @@ public class ResearcherWorker implements WorkerAgent {
         String sessionId = (String) state.getOrDefault("sessionId", "");
         String userInput = (String) state.getOrDefault("userInput", "");
         String existingContext = (String) state.getOrDefault("context", "");
-        String kbId = (String) state.getOrDefault("kbId", "");
+        List<String> knowledgeBaseIds = AgentToolSupport.knowledgeBaseIds(state);
         boolean webSearchEnabled = AgentToolSupport.isWebSearchEnabled(state.get("webSearch"));
         ChatClient chatClient = chatClientFactory.create(TEMPERATURE);
 
@@ -87,7 +87,7 @@ public class ResearcherWorker implements WorkerAgent {
         RenderedAgentPrompt renderedPrompt = agentPromptRenderer.render(name(), Map.of(
                 "userInput", userInput,
                 "context", existingContext,
-                "kbId", kbId
+                "hasKnowledgeBases", !knowledgeBaseIds.isEmpty()
         ));
         String systemPrompt = renderedPrompt.systemPrompt();
         String userPrompt = renderedPrompt.userPrompt();
@@ -99,7 +99,7 @@ public class ResearcherWorker implements WorkerAgent {
         String llmSpanId = chainPublisher.publishTraceStart(sessionId, "模型调研与综合",
                 AgentTraceEvent.Kind.LLM, nodeId,
                 Map.of("promptLength", userPrompt.length(), "webSearch", webSearchEnabled,
-                        "hasKbId", !kbId.isBlank()), null);
+                        "hasKnowledgeBases", !knowledgeBaseIds.isEmpty()), null);
         SessionContextHolder.ContextSnapshot contextSnapshot = SessionContextHolder.snapshot();
         String response;
         try {
@@ -108,7 +108,7 @@ public class ResearcherWorker implements WorkerAgent {
                     .user(userPrompt);
 
             promptSpec = AgentToolSupport.applyToolVisibility(
-                    promptSpec, webSearchEnabled, !kbId.isBlank());
+                    promptSpec, webSearchEnabled, knowledgeBaseIds);
 
             promptSpec = promptSpec.advisors(new MessageChatMemoryAdvisor(chatMemory))
                     .advisors(a -> a.param(
@@ -155,7 +155,7 @@ public class ResearcherWorker implements WorkerAgent {
         if (!existingContext.isBlank()) {
             contextBuilder.append("\n\n");
         }
-        contextBuilder.append("【网络调研结果】\n").append(output.report());
+        contextBuilder.append("【调研结果】\n").append(output.report());
 
         publishStatus(sessionId, SseMessage.Type.AI_EXECUTING,
                 "【调研】调研完成，共执行 " + searchCount + " 次搜索");

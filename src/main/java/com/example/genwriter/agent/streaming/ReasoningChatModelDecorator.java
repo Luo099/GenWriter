@@ -4,6 +4,8 @@ import com.example.genwriter.agent.chain.ThoughtChainPublisher;
 import com.example.genwriter.agent.tool.SessionContextHolder;
 import com.example.genwriter.config.DynamicChatModel;
 import com.example.genwriter.config.LLMConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -17,6 +19,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.model.function.FunctionCallingOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -25,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 推理模型 ChatModel 装饰器：把 reasoning_content 采集下沉到标准管线。
@@ -56,15 +60,21 @@ public class ReasoningChatModelDecorator implements ChatModel {
     private final ReasoningStreamHelper reasoningStreamHelper;
     private final ReasoningStreamingClient streamingClient;
     private final ThoughtChainPublisher chainPublisher;
+    private final ObjectProvider<FunctionCallback> registeredTools;
+    private final ObjectMapper objectMapper;
 
     public ReasoningChatModelDecorator(DynamicChatModel delegate,
                                        ReasoningStreamHelper reasoningStreamHelper,
                                        ReasoningStreamingClient streamingClient,
-                                       ThoughtChainPublisher chainPublisher) {
+                                       ThoughtChainPublisher chainPublisher,
+                                       ObjectProvider<FunctionCallback> registeredTools,
+                                       ObjectMapper objectMapper) {
         this.delegate = delegate;
         this.reasoningStreamHelper = reasoningStreamHelper;
         this.streamingClient = streamingClient;
         this.chainPublisher = chainPublisher;
+        this.registeredTools = registeredTools;
+        this.objectMapper = objectMapper;
     }
 
     /** {@link #callWithReasoning(Prompt)} 的返回：content 正文 + reasoning 全文。 */
@@ -282,7 +292,11 @@ public class ReasoningChatModelDecorator implements ChatModel {
             Map<String, Object> function = new LinkedHashMap<>();
             function.put("name", callback.getName());
             function.put("description", callback.getDescription());
-            function.put("parameters", callback.getInputTypeSchema());
+            try {
+                function.put("parameters", objectMapper.readTree(callback.getInputTypeSchema()));
+            } catch (JsonProcessingException failure) {
+                throw new IllegalArgumentException("Invalid schema for tool " + callback.getName(), failure);
+            }
             Map<String, Object> tool = new LinkedHashMap<>();
             tool.put("type", "function");
             tool.put("function", function);
@@ -294,15 +308,29 @@ public class ReasoningChatModelDecorator implements ChatModel {
     /** 兼容新旧两代 options 接口，提取运行时注册的工具回调。 */
     @SuppressWarnings("deprecation")
     private List<FunctionCallback> extractToolCallbacks(ChatOptions options) {
-        if (options instanceof ToolCallingChatOptions toolCallingOptions
-                && toolCallingOptions.getToolCallbacks() != null) {
-            return toolCallingOptions.getToolCallbacks();
+        if (!(options instanceof FunctionCallingOptions functionOptions)) {
+            return List.of();
         }
-        if (options instanceof FunctionCallingOptions functionOptions
-                && functionOptions.getFunctionCallbacks() != null) {
-            return functionOptions.getFunctionCallbacks();
+
+        List<FunctionCallback> inline;
+        Set<String> names;
+        if (options instanceof ToolCallingChatOptions toolCallingOptions) {
+            inline = toolCallingOptions.getToolCallbacks();
+            names = toolCallingOptions.getToolNames();
+        } else {
+            inline = functionOptions.getFunctionCallbacks();
+            names = functionOptions.getFunctions();
         }
-        return List.of();
+
+        Map<String, FunctionCallback> selected = new LinkedHashMap<>();
+        if (inline != null) {
+            inline.forEach(callback -> selected.put(callback.getName(), callback));
+        }
+        if (names != null && !names.isEmpty()) {
+            registeredTools.stream().filter(callback -> names.contains(callback.getName()))
+                    .forEach(callback -> selected.putIfAbsent(callback.getName(), callback));
+        }
+        return List.copyOf(selected.values());
     }
 
     private Map<String, Object> extractToolContext(ChatOptions options) {

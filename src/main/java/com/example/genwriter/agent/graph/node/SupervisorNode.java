@@ -21,6 +21,7 @@ import com.example.genwriter.agent.supervisor.SupervisorSystemPromptProvider;
 import com.example.genwriter.agent.supervisor.WorkerAgent;
 import com.example.genwriter.agent.supervisor.WorkerRegistry;
 import com.example.genwriter.agent.supervisor.worker.ReviewWorker;
+import com.example.genwriter.agent.tool.AgentToolSupport;
 import com.example.genwriter.agent.tool.SessionContextHolder;
 import com.example.genwriter.message.ChainNode;
 import com.example.genwriter.message.SseMessage;
@@ -150,7 +151,7 @@ public class SupervisorNode implements NodeAction {
         accumulated.put("sessionId", sessionId);
         String userInput = state.value("userInput", String.class).orElse("");
         accumulated.put("userInput", userInput);
-        accumulated.put("kbId", state.value("kbId", String.class).orElse(""));
+        accumulated.put("knowledgeBaseIds", state.value("knowledgeBaseIds", List.class).orElse(List.of()));
         WritingGenreProfile genreProfile = WritingGenreResolver.resolve(userInput);
         boolean markdownEnabled = writingOutputSettingsService.isMarkdownEnabled();
         accumulated.put("writingGenre", genreProfile.genre().name());
@@ -182,6 +183,18 @@ public class SupervisorNode implements NodeAction {
         String supervisorNodeId = chainPublisher.publishStart(sessionId, "任务规划",
                 ChainNode.Type.PLANNING, null,
                 Map.of("userInput", truncate((String) accumulated.getOrDefault("userInput", ""), 200)));
+
+        if ("KNOWLEDGE_QA".equals(writingType)) {
+            chainPublisher.publishComplete(sessionId, supervisorNodeId,
+                    Map.of("action", "direct_answer", "reasoning", "用户选择了知识问答"));
+            WorkerAgent worker = workerRegistry.get("direct_answer");
+            accumulated.put("intent", "KNOWLEDGE_QA");
+            Map<String, Object> answerInput = new HashMap<>(accumulated);
+            answerInput.put("explicitKnowledgeQa", true);
+            accumulated.putAll(worker.execute(answerInput));
+            accumulated.put("currentNode", "SupervisorNode");
+            return accumulated;
+        }
 
         // ===== ReAct 主路径：单步决策循环；异常/连续失败回退到旧 plan-then-execute =====
         List<String> steps;
@@ -784,15 +797,6 @@ public class SupervisorNode implements NodeAction {
         boolean hasWritingStages = remaining.stream()
                 .anyMatch(s -> "outline".equals(s) || "draft".equals(s) || "polish".equals(s));
         if (hasWritingStages) {
-            String kbId = (String) accumulated.getOrDefault("kbId", "");
-            if (kbId != null && !kbId.isBlank() && !remaining.contains("researcher")) {
-                log.info("[SupervisorNode] 检测到WRITING_TASK+kbId但计划缺少researcher，自动补充");
-                List<String> adjusted = new ArrayList<>();
-                adjusted.add("intent_recognition");
-                adjusted.add("researcher");
-                adjusted.addAll(remaining);
-                return adjusted;
-            }
             return steps;
         }
 
@@ -825,7 +829,7 @@ public class SupervisorNode implements NodeAction {
         StringBuilder sb = new StringBuilder();
         sb.append("## 当前状态\n");
         sb.append("- userInput: ").append(truncate((String) state.getOrDefault("userInput", ""), 500)).append("\n");
-        sb.append("- kbId: ").append(state.getOrDefault("kbId", "")).append("\n");
+        sb.append("- hasKnowledgeBases: ").append(!AgentToolSupport.knowledgeBaseIds(state).isEmpty()).append("\n");
         sb.append("- writingGenre: ").append(state.getOrDefault("writingGenre", "UNKNOWN"))
                 .append(" (").append(state.getOrDefault("genreLabel", "通用写作")).append(")\n");
         sb.append("- outputFormat: ").append(state.getOrDefault("outputFormat", "markdown")).append("\n");
@@ -858,7 +862,7 @@ public class SupervisorNode implements NodeAction {
         StringBuilder sb = new StringBuilder();
         sb.append("## 当前状态（需要重规划）\n");
         sb.append("- userInput: ").append(truncate((String) state.getOrDefault("userInput", ""), 500)).append("\n");
-        sb.append("- kbId: ").append(state.getOrDefault("kbId", "")).append("\n");
+        sb.append("- hasKnowledgeBases: ").append(!AgentToolSupport.knowledgeBaseIds(state).isEmpty()).append("\n");
         sb.append("- writingGenre: ").append(state.getOrDefault("writingGenre", "UNKNOWN"))
                 .append(" (").append(state.getOrDefault("genreLabel", "通用写作")).append(")\n");
         sb.append("- outputFormat: ").append(state.getOrDefault("outputFormat", "markdown")).append("\n");

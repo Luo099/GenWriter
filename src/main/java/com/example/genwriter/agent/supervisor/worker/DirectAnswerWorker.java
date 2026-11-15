@@ -15,6 +15,8 @@ import com.example.genwriter.agent.profile.RenderedAgentPrompt;
 import com.example.genwriter.agent.supervisor.WorkerAgent;
 import com.example.genwriter.agent.supervisor.WorkerRegistry;
 import com.example.genwriter.agent.tool.AgentToolSupport;
+import com.example.genwriter.agent.tool.KnowledgeBaseTool;
+import com.example.genwriter.agent.tool.ToolResult;
 import com.example.genwriter.agent.tool.SessionContextHolder;
 import com.example.genwriter.message.AgentTraceEvent;
 import com.example.genwriter.message.ChainNode;
@@ -37,6 +39,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -58,6 +61,7 @@ public class DirectAnswerWorker implements WorkerAgent {
     private final ReasoningStreamHelper reasoningStreamHelper;
     private final ContentStreamPublisher contentStreamPublisher;
     private final FileStorageService fileStorageService;
+    private final KnowledgeBaseTool knowledgeBaseTool;
 
     @PostConstruct
     void init() {
@@ -79,7 +83,8 @@ public class DirectAnswerWorker implements WorkerAgent {
         String sessionId = (String) state.getOrDefault("sessionId", "");
         String userInput = (String) state.getOrDefault("userInput", "");
         String context = (String) state.getOrDefault("context", "");
-        String kbId = (String) state.getOrDefault("kbId", "");
+        List<String> knowledgeBaseIds = AgentToolSupport.knowledgeBaseIds(state);
+        boolean explicitKnowledgeQa = Boolean.TRUE.equals(state.get("explicitKnowledgeQa"));
         boolean webSearchEnabled = AgentToolSupport.isWebSearchEnabled(state.get("webSearch"));
 
         // 获取多模态内容
@@ -88,16 +93,43 @@ public class DirectAnswerWorker implements WorkerAgent {
 
         String nodeId = chainPublisher.publishStart(sessionId, "直接回答",
                 ChainNode.Type.EXECUTION, null,
-                Map.of("userInput", truncate(userInput, 200), "hasKbId", !kbId.isBlank(),
+                Map.of("userInput", truncate(userInput, 200), "hasKnowledgeBases", !knowledgeBaseIds.isEmpty(),
                         "webSearch", webSearchEnabled));
         contentStreamPublisher.startStage(sessionId, nodeId, ContentStreamPublisher.Stage.DIRECT_ANSWER);
+
+        String answerPrefix = "";
+        String knowledgeSourceFooter = "";
+        if (explicitKnowledgeQa) {
+            ToolResult lookup = knowledgeBaseTool.search(new KnowledgeBaseTool.KnowledgeSearchInput(userInput, null),
+                    knowledgeBaseIds, new SessionContextHolder.ContextSnapshot(sessionId, nodeId, name()));
+            if (!lookup.success()) {
+                return completeAnswer(sessionId, nodeId, lookup.error());
+            }
+            if (Integer.valueOf(0).equals(lookup.metadata().get("total"))) {
+                if (!webSearchEnabled) {
+                    return completeAnswer(sessionId, nodeId, KnowledgeBaseTool.NO_MATCH + "。");
+                }
+                answerPrefix = KnowledgeBaseTool.NO_MATCH + "。\n\n";
+                context += "\n\n所选知识库没有命中。仅在取得网页结果时补充回答，注明网页来源。";
+            } else {
+                context += "\n\n本轮知识库检索资料（引述时标注片段所属知识库）：\n" + lookup.content();
+                if (lookup.metadata().get("matchedKnowledgeBases") instanceof List<?> names && !names.isEmpty()) {
+                    knowledgeSourceFooter = "\n\n参考知识库：" + names.stream()
+                            .map(String::valueOf).collect(Collectors.joining("、"));
+                }
+            }
+        }
 
         RenderedAgentPrompt renderedPrompt = agentPromptRenderer.render(name(), Map.of(
                 "userInput", userInput,
                 "context", context,
-                "kbId", kbId
+                "hasKnowledgeBases", !explicitKnowledgeQa && !knowledgeBaseIds.isEmpty()
         ));
         String systemPrompt = renderedPrompt.systemPrompt();
+        if (explicitKnowledgeQa) {
+            systemPrompt += "\n本轮知识问答的知识库事实以本轮检索资料为准。会话历史仅用于理解问题。"
+                    + "资料不足时明确说明。联网补充需要网页检索结果和来源链接。";
+        }
         String userPrompt = renderedPrompt.userPrompt();
         userPrompt = AgentToolSupport.appendWebSearchDisabledNotice(userPrompt, webSearchEnabled);
 
@@ -125,7 +157,11 @@ public class DirectAnswerWorker implements WorkerAgent {
         String conversationId = sessionId + ":direct";
         final String finalUserPrompt = userPrompt;
 
-        StringBuilder contentBuilder = new StringBuilder();
+        StringBuilder contentBuilder = new StringBuilder(answerPrefix);
+        if (!answerPrefix.isEmpty()) {
+            contentStreamPublisher.publishDelta(sessionId, nodeId, ContentStreamPublisher.Stage.DIRECT_ANSWER,
+                    answerPrefix, contentBuilder);
+        }
         SessionContextHolder.set(sessionId, nodeId, name());
         // 思考流与工具调用共存：采集由 ReasoningChatModelDecorator 在标准管线上完成
         // （webSearch/kb 启用时工具循环在装饰器内执行，不再因工具需求放弃采集）
@@ -133,7 +169,7 @@ public class DirectAnswerWorker implements WorkerAgent {
         String llmSpanId = chainPublisher.publishTraceStart(sessionId, "模型直接回答",
                 AgentTraceEvent.Kind.LLM, nodeId,
                 Map.of("promptLength", userPrompt.length(), "temperature", TEMPERATURE,
-                        "webSearch", webSearchEnabled, "hasKbId", !kbId.isBlank(),
+                        "webSearch", webSearchEnabled, "hasKnowledgeBases", !knowledgeBaseIds.isEmpty(),
                         "hasImages", multimodalContent != null && multimodalContent.hasImages(),
                         "reasoningCaptured", reasoningCaptured), null);
         try {
@@ -166,14 +202,14 @@ public class DirectAnswerWorker implements WorkerAgent {
             }
 
             promptSpec = AgentToolSupport.applyToolVisibility(
-                    promptSpec, webSearchEnabled, !kbId.isBlank());
+                    promptSpec, webSearchEnabled, explicitKnowledgeQa ? List.of() : knowledgeBaseIds);
 
             promptSpec.advisors(new MessageChatMemoryAdvisor(chatMemory))
                     .advisors(a -> a.param(
                             AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY,
                             conversationId));
 
-            if (longTermMemoryProperties.isEnabled()) {
+            if (!explicitKnowledgeQa && longTermMemoryProperties.isEnabled()) {
                 promptSpec = promptSpec.advisors(new LongTermMemoryAdvisor(
                         memoryService,
                         memoryPromptFormatter,
@@ -205,7 +241,15 @@ public class DirectAnswerWorker implements WorkerAgent {
             SessionContextHolder.clear();
         }
 
-        String fullResponse = contentBuilder.toString();
+        if (!knowledgeSourceFooter.isEmpty()) {
+            contentBuilder.append(knowledgeSourceFooter);
+            contentStreamPublisher.publishDelta(sessionId, nodeId, ContentStreamPublisher.Stage.DIRECT_ANSWER,
+                    knowledgeSourceFooter, contentBuilder);
+        }
+        return completeAnswer(sessionId, nodeId, contentBuilder.toString());
+    }
+
+    private Map<String, Object> completeAnswer(String sessionId, String nodeId, String fullResponse) {
         log.info("[DirectAnswerWorker] 回答完成: length={}", fullResponse.length());
         chainPublisher.publishComplete(sessionId, nodeId,
                 Map.of("length", fullResponse.length()), null);

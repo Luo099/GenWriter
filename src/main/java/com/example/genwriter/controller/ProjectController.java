@@ -6,6 +6,7 @@ import com.example.genwriter.model.dto.request.UpdateProjectRequest;
 import com.example.genwriter.model.dto.response.ProjectDTO;
 import com.example.genwriter.model.vo.ProjectVO;
 import com.example.genwriter.service.ProjectService;
+import com.example.genwriter.service.ProjectKnowledgeBaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,20 @@ import java.util.stream.Collectors;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final ProjectKnowledgeBaseService projectKnowledgeBases;
+
+    @GetMapping("/{id}/knowledge-bases")
+    public ApiResponse<KnowledgeBaseSelection> getKnowledgeBases(@PathVariable String id) {
+        return ApiResponse.success(new KnowledgeBaseSelection(projectKnowledgeBases.get(id)));
+    }
+
+    @PutMapping("/{id}/knowledge-bases")
+    public ApiResponse<KnowledgeBaseSelection> replaceKnowledgeBases(
+            @PathVariable String id, @RequestBody KnowledgeBaseSelection selection) {
+        return ApiResponse.success(new KnowledgeBaseSelection(projectKnowledgeBases.replace(id, selection.knowledgeBaseIds())));
+    }
+
+    public record KnowledgeBaseSelection(List<String> knowledgeBaseIds) {}
 
     /**
      * 创建项目

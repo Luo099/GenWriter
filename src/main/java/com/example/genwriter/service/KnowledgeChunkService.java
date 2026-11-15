@@ -36,6 +36,8 @@ public interface KnowledgeChunkService {
      */
     List<KnowledgeChunkDTO> searchSimilarChunks(SearchKnowledgeChunkRequest request);
 
+    List<KnowledgeChunkDTO> searchSimilarChunks(String query, List<String> knowledgeBaseIds, Integer limit, Double threshold);
+
     /**
      * 删除知识片段
      */

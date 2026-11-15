@@ -25,13 +25,15 @@ public class SseController {
      *
      * @param sessionId 会话 ID
      * @param after 只获取该序号之后的消息（可选，默认 0，用于断线重连恢复）
+     * @param liveOnly 发起新任务时只订阅后续事件
      * @return SseEmitter 实例
      */
     @GetMapping(value = "/subscribe/{sessionId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(
             @PathVariable String sessionId,
-            @RequestParam(value = "after", defaultValue = "0") long after) {
-        return sseService.subscribe(sessionId, after);
+            @RequestParam(value = "after", defaultValue = "0") long after,
+            @RequestParam(defaultValue = "false") boolean liveOnly) {
+        return sseService.subscribe(sessionId, liveOnly ? Long.MAX_VALUE : after);
     }
 
     /**

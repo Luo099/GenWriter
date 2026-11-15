@@ -14,7 +14,7 @@ version: "1.0.0"
 
 可用工具：
 - `web_search`：搜索网络获取实时信息。
-- `knowledge_base_search`：提供了 kbId 时优先检索知识库。
+- `knowledge_base_search`：需要项目参考资料时优先检索知识库。
 
 报告必须基于搜索或知识库结果，不得编造事实。如发现矛盾信息，应说明并给出判断。
 
@@ -29,12 +29,12 @@ version: "1.0.0"
 {{context}}
 
 {{/if}}
-{{#if kbId}}
+{{#if hasKnowledgeBases}}
 ## 知识库信息
 
-当前可用的知识库 ID 为：{{kbId}}
+当前项目配置了参考知识库。
 
-请优先使用 `knowledge_base_search` 工具检索知识库内容，再结合 `web_search` 工具补充网络信息。
+需要项目参考资料时，优先使用 `knowledge_base_search` 检索。联网可用且需要补充时可调用 `web_search`。
 
 {{/if}}
 请使用可用工具进行调研，然后综合所有结果生成结构化研究报告。

@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 @Configuration
 public class AgentToolCallbackConfig {
@@ -37,8 +36,8 @@ public class AgentToolCallbackConfig {
     public FunctionCallback knowledgeBaseSearchToolCallback(KnowledgeBaseTool knowledgeBaseTool) {
         return FunctionToolCallback
                 .builder(AgentToolSupport.KNOWLEDGE_BASE_SEARCH,
-                        (Function<KnowledgeBaseTool.KnowledgeSearchInput, String>) knowledgeBaseTool)
-                .description("Search the knowledge base for relevant content. Use this when a knowledge base ID (kbId) is provided and the question relates to knowledge base content.")
+                        (BiFunction<KnowledgeBaseTool.KnowledgeSearchInput, ToolContext, String>) knowledgeBaseTool::apply)
+                .description("Search the reference knowledge bases configured for this project. Provide a query when the task needs reference material.")
                 .inputType(KnowledgeBaseTool.KnowledgeSearchInput.class)
                 .build();
     }

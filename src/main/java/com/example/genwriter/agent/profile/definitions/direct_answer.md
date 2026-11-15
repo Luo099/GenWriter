@@ -14,7 +14,7 @@ version: "1.0.0"
 
 可用工具：
 - `web_search`：问题涉及时效性信息、最新数据或事实核查时使用。
-- `knowledge_base_search`：提供了 kbId 且问题与知识库内容相关时使用。
+- `knowledge_base_search`：问题需要查阅项目参考资料时使用。
 
 如果上下文已足够回答，无需调用工具。工具调用后必须基于结果给出完整回答。
 
@@ -25,12 +25,12 @@ version: "1.0.0"
 {{context}}
 
 {{/if}}
-{{#if kbId}}
+{{#if hasKnowledgeBases}}
 ## 知识库信息
 
-当前可用的知识库 ID 为：{{kbId}}
+当前项目配置了参考知识库。
 
-如果问题与知识库内容相关，请使用 `knowledge_base_search` 工具检索，传入此 kbId。
+如果问题与参考资料相关，请使用 `knowledge_base_search` 工具检索。
 
 {{/if}}
 ## 用户问题

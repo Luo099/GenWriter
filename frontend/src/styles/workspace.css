@@ -1227,3 +1227,12 @@
     flex-basis: 100%;
   }
 }
+
+.project-kb-trigger { flex: 0 0 auto; white-space: nowrap; }
+.project-kb-filter { width: 100%; }
+.project-kb-list { margin: .75rem 0; padding: 0; list-style: none; }
+.project-kb-list label { display: flex; align-items: flex-start; gap: .7rem; padding: .6rem .15rem; cursor: pointer; }
+.project-kb-list label input { width: auto; margin-top: .3rem; flex: 0 0 auto; }
+.project-kb-list label span { min-width: 0; overflow-wrap: anywhere; }
+.project-kb-list small { display: block; margin-top: .2rem; }
+.project-kb-empty { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }

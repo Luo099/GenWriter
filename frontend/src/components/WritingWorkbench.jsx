@@ -43,7 +43,7 @@ const buildFrozenSelection = (snapshot, document) => {
   };
 };
 
-const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh, onIterate, collapsed = false, onCollapse, onExpand }) => {
+const WritingWorkbench = ({ sessionId, isLoading, documentRefresh, onIterate, collapsed = false, onCollapse, onExpand }) => {
   const [documents, setDocuments] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [title, setTitle] = useState('');
@@ -273,7 +273,7 @@ const WritingWorkbench = ({ sessionId, isLoading, selectedKbId, documentRefresh,
 
     const selectedMode = ITERATION_MODES.find((item) => item.value === iterationMode) || ITERATION_MODES[0];
     const instruction = iterationText.trim() || selectedMode.fallback;
-    await onIterate?.(instruction, selectedMode.value, true, selectedKbId, [], activeDocument.id);
+    await onIterate?.(instruction, selectedMode.value, true, [], activeDocument.id);
     setIterationText('');
     setNotice('已提交迭代');
   };

@@ -2,7 +2,6 @@ package com.example.genwriter.service.impl;
 
 import com.example.genwriter.model.dto.DocumentChunk;
 import com.example.genwriter.model.dto.request.CreateKnowledgeChunkRequest;
-import com.example.genwriter.model.dto.request.SearchKnowledgeChunkRequest;
 import com.example.genwriter.model.dto.response.KnowledgeChunkDTO;
 import com.example.genwriter.rag.chunking.ChunkingConfig;
 import com.example.genwriter.rag.chunking.DocumentChunkingConfig;
@@ -88,17 +87,18 @@ public class RAGPipelineServiceImpl implements RAGPipelineService {
 
     @Override
     public List<KnowledgeChunkDTO> searchAndRetrieve(String query, String kbId, int topK, Double threshold) {
-        log.debug("Searching knowledge base: {} with query: {}, topK: {}", kbId, query, topK);
+        return searchAcrossKnowledgeBases(query, List.of(kbId), topK, threshold);
+    }
 
+    @Override
+    public List<KnowledgeChunkDTO> searchAcrossKnowledgeBases(String query, List<String> knowledgeBaseIds, int topK) {
+        return searchAcrossKnowledgeBases(query, knowledgeBaseIds, topK, null);
+    }
+
+    private List<KnowledgeChunkDTO> searchAcrossKnowledgeBases(String query, List<String> knowledgeBaseIds,
+                                                              int topK, Double threshold) {
         double effectiveThreshold = threshold != null ? threshold : similarityThreshold;
-        SearchKnowledgeChunkRequest request = SearchKnowledgeChunkRequest.builder()
-                .kbId(kbId)
-                .query(query)
-                .limit(topK)
-                .threshold(effectiveThreshold)
-                .build();
-
-        return chunkService.searchSimilarChunks(request);
+        return chunkService.searchSimilarChunks(query, knowledgeBaseIds, topK, effectiveThreshold);
     }
 
     @Override

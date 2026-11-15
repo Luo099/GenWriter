@@ -5,9 +5,8 @@ export const getMessagesBySessionId = (sessionId) =>
 
 export const createMessage = (data) => client.post('/messages', data);
 
-export const chat = (sessionId, userInput, type = 'AUTO', webSearch = true, kbId = '', attachmentIds = [], documentId = '', target) => {
+export const chat = (sessionId, userInput, type = 'AUTO', webSearch = true, attachmentIds = [], documentId = '', target) => {
   const params = new URLSearchParams({ type, webSearch });
-  if (kbId) params.append('kbId', kbId);
   return client.post(`/messages/${sessionId}/chat?${params}`, {
     text: userInput,
     attachmentIds,

@@ -171,16 +171,26 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(readOnly = true)
     public List<KnowledgeChunkDTO> searchSimilarChunks(SearchKnowledgeChunkRequest request) {
-        log.debug("相似度搜索: kbId={}, query={}", request.getKbId(), request.getQuery());
+        return searchSimilarChunks(request.getQuery(), List.of(request.getKbId()), request.getLimit(), request.getThreshold());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<KnowledgeChunkDTO> searchSimilarChunks(String query, List<String> knowledgeBaseIds,
+                                                       Integer requestedLimit, Double requestedThreshold) {
+        if (knowledgeBaseIds.isEmpty()) {
+            return List.of();
+        }
+        log.debug("相似度搜索: knowledgeBaseIds={}, query={}", knowledgeBaseIds, query);
 
         // 1. 将查询转换为嵌入向量
-        float[] queryEmbedding = embeddingService.embed(request.getQuery());
+        float[] queryEmbedding = embeddingService.embed(query);
 
-        double threshold = request.getThreshold() != null ? request.getThreshold() : embeddingConfig.getSimilarityThreshold();
-        int limit = request.getLimit() != null ? request.getLimit() : embeddingConfig.getDefaultSearchLimit();
+        double threshold = requestedThreshold != null ? requestedThreshold : embeddingConfig.getSimilarityThreshold();
+        int limit = requestedLimit != null ? requestedLimit : embeddingConfig.getDefaultSearchLimit();
 
         // 2. rerank 精排路径：宽召回（不做阈值过滤，阈值判定下沉到 gate）+ 精排 + 门控
-        List<KnowledgeChunkDTO> rerankedResults = rerankAndGate(request, queryEmbedding, limit);
+        List<KnowledgeChunkDTO> rerankedResults = rerankAndGate(query, knowledgeBaseIds, queryEmbedding, limit);
         if (rerankedResults != null) {
             return rerankedResults;
         }
@@ -191,8 +201,8 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
             // 阈值语义转换: 余弦距离 = 1 - 余弦相似度, 故 1 - threshold 对齐 cosine_dist < 阈值
             // 只检索与查询向量同一 embedding_model 的行，不同模型的向量不可直接比较
             String vectorLiteral = VectorUtils.arrayToVectorString(queryEmbedding);
-            List<KnowledgeChunk> results = knowledgeChunkMapper.similaritySearchWithThreshold(
-                    request.getKbId(), vectorLiteral, embeddingConfig.getDefaultModel(),
+            List<KnowledgeChunk> results = knowledgeChunkMapper.similaritySearchInBasesWithThreshold(
+                    knowledgeBaseIds, vectorLiteral, embeddingConfig.getDefaultModel(),
                     1 - threshold, limit);
 
             return results.stream()
@@ -201,9 +211,8 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
         }
 
         // 回退到内存计算（同样只比较同一 embedding_model 的行）
-        List<KnowledgeChunk> allChunks = knowledgeChunkMapper.selectByKbId(request.getKbId());
-
-        List<SimilarityScore> scoredChunks = allChunks.stream()
+        List<SimilarityScore> scoredChunks = knowledgeBaseIds.stream()
+                .flatMap(id -> knowledgeChunkMapper.selectByKbId(id).stream())
                 .filter(chunk -> embeddingConfig.getDefaultModel()
                         .equalsIgnoreCase(chunk.getEmbeddingModel()))
                 .map(chunk -> {
@@ -228,7 +237,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
      * @return null 表示 rerank 不可用或调用失败（调用方回退原阈值路径）；
      *         空列表表示门控拒绝（整段不注入，空召回语义）
      */
-    private List<KnowledgeChunkDTO> rerankAndGate(SearchKnowledgeChunkRequest request,
+    private List<KnowledgeChunkDTO> rerankAndGate(String query, List<String> knowledgeBaseIds,
                                                   float[] queryEmbedding,
                                                   int limit) {
         if (!reranker.isAvailable()) {
@@ -236,7 +245,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
         }
 
         try {
-            List<KnowledgeChunk> wideCandidates = wideRecall(request.getKbId(), queryEmbedding,
+            List<KnowledgeChunk> wideCandidates = wideRecall(knowledgeBaseIds, queryEmbedding,
                     rerankProperties.getRecallLimit());
             if (wideCandidates.isEmpty()) {
                 // 宽召回为空走原路径兜底（保持原空结果语义）
@@ -246,7 +255,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
             List<RerankCandidate> candidates = wideCandidates.stream()
                     .map(chunk -> new RerankCandidate(chunk.getId(), chunk.getContent()))
                     .toList();
-            List<RerankResult> reranked = reranker.rerank(request.getQuery(), candidates, limit);
+            List<RerankResult> reranked = reranker.rerank(query, candidates, limit);
             if (reranked.isEmpty()) {
                 return null;
             }
@@ -278,15 +287,16 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     /**
      * 宽召回：按 embedding_model 过滤（跨模型向量不可比），不做阈值过滤，取 top recallLimit。
      */
-    private List<KnowledgeChunk> wideRecall(String kbId, float[] queryEmbedding, int recallLimit) {
+    private List<KnowledgeChunk> wideRecall(List<String> knowledgeBaseIds, float[] queryEmbedding, int recallLimit) {
         if (embeddingConfig.isUseDbVectorSearch()) {
             String vectorLiteral = VectorUtils.arrayToVectorString(queryEmbedding);
-            return knowledgeChunkMapper.similaritySearch(
-                    kbId, vectorLiteral, embeddingConfig.getDefaultModel(), Math.max(recallLimit, 1));
+            return knowledgeChunkMapper.similaritySearchInBases(
+                    knowledgeBaseIds, vectorLiteral, embeddingConfig.getDefaultModel(), Math.max(recallLimit, 1));
         }
 
         // 内存路径：全量计算余弦相似度后取 top N（无阈值过滤）
-        return knowledgeChunkMapper.selectByKbId(kbId).stream()
+        return knowledgeBaseIds.stream()
+                .flatMap(id -> knowledgeChunkMapper.selectByKbId(id).stream())
                 .filter(chunk -> embeddingConfig.getDefaultModel().equalsIgnoreCase(chunk.getEmbeddingModel()))
                 .map(chunk -> new SimilarityScore(chunk,
                         VectorUtils.cosineSimilarity(queryEmbedding, chunk.getEmbedding())))

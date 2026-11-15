@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * 聊天事件
  *
@@ -42,9 +44,9 @@ public class ChatEvent {
     }
 
     /**
-     * 知识库ID（知识库问答时使用）
+     * 本轮可检索的知识库 ID
      */
-    private String kbId;
+    private List<String> knowledgeBaseIds;
 
     /**
      * 写作类型
@@ -57,11 +59,6 @@ public class ChatEvent {
     private boolean webSearch = true;
 
     private com.example.genwriter.model.dto.workspace.WorkspaceModels.WritingTarget target;
-
-    public ChatEvent(String sessionId, String documentId, MultimodalContent userInput, String kbId,
-                     WritingType type, boolean webSearch) {
-        this(sessionId, documentId, userInput, kbId, type, webSearch, null);
-    }
 
     /**
      * 写作类型枚举

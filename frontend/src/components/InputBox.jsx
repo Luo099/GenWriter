@@ -244,36 +244,22 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
   const canSend = (inputValue.trim() || attachments.some((a) => a.id && !a.error)) && !isLoading && !disabled && !isUploading;
 
   return (
-    <div className="input-container">
+    <div className="composer">
       <div
-        className={`input-wrapper${isDragOver ? ' drag-over' : ''}`}
+        className={`composer-box${isDragOver ? ' is-drag' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <button
-          className="attachment-btn"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isUploading}
-          title="添加附件"
-          type="button"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.doc,.docx,.txt,.md,.csv,.json,.xml"
-          multiple
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-        />
+        {attachments.length > 0 && (
+          <div className="composer-attachments">
+            <AttachmentPreview attachments={attachments} onRemove={handleRemoveAttachment} onRetry={handleRetryAttachment} />
+          </div>
+        )}
         <textarea
           ref={textareaRef}
-          className="input-textarea"
-          placeholder="输入消息... (可拖拽或粘贴图片)"
+          className="composer-input"
+          placeholder="描述你想写的内容，或直接粘贴一段文字…"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -281,50 +267,76 @@ const InputBox = ({ onSend, disabled, isLoading, kbId = '', sessionId = '' }) =>
           disabled={disabled || isLoading}
           rows={1}
         />
-        <button
-          className="send-btn"
-          onClick={handleSubmit}
-          disabled={!canSend}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
-      </div>
-      <AttachmentPreview attachments={attachments} onRemove={handleRemoveAttachment} onRetry={handleRetryAttachment} />
-      <div className="mode-selector">
-        <div className="mode-pills">
-          {MODES.map((m) => (
+        <div className="composer-bar">
+          <div className="composer-modes" role="group" aria-label="写作模式">
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                className={`mode-pill${mode === m.value ? ' active' : ''}`}
+                onClick={() => setMode(m.value)}
+                type="button"
+              >
+                <span className="mode-pill-icon" aria-hidden="true">{m.icon}</span>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <div className="composer-tools">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.doc,.docx,.txt,.md,.csv,.json,.xml"
+              multiple
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
             <button
-              key={m.value}
-              className={`mode-pill${mode === m.value ? ' active' : ''}`}
-              onClick={() => setMode(m.value)}
+              className="composer-icon-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isUploading}
+              title="添加附件（图片 / 文档）"
               type="button"
             >
-              <span className="mode-pill-icon">{m.icon}</span>
-              {m.label}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+              </svg>
             </button>
-          ))}
+            <button
+              className={`composer-toggle${webSearch ? ' active' : ''}`}
+              onClick={() => setWebSearch(!webSearch)}
+              type="button"
+              title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
+              aria-pressed={webSearch}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              联网
+            </button>
+            <button
+              className="composer-send"
+              onClick={handleSubmit}
+              disabled={!canSend}
+              title="发送（Enter）"
+              type="button"
+            >
+              {isLoading ? (
+                <span className="composer-send-spinner" aria-hidden="true" />
+              ) : (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="6 11 12 5 18 11"></polyline>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
-        <button
-          className={`websearch-toggle${webSearch ? ' active' : ''}`}
-          onClick={() => setWebSearch(!webSearch)}
-          type="button"
-          title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
-        >
-          <span className="websearch-toggle-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <span className="websearch-toggle-label">联网搜索</span>
-        </button>
       </div>
-      <p className="input-hint">按 Enter 发送，Shift + Enter 换行 | 支持拖拽/粘贴图片</p>
+      <p className="composer-hint">Enter 发送 · Shift + Enter 换行 · 支持拖拽或粘贴图片</p>
     </div>
   );
-};
+}
+
 
 export default InputBox;

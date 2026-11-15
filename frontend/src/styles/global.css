@@ -1,5 +1,6 @@
 @import './theme.css';
 @import './components.css';
+@import './redesign.css';
 
 #root {
   width: 100vw;

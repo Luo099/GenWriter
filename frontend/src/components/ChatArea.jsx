@@ -7,7 +7,7 @@ import '../styles/global.css';
 
 const WORKBENCH_WIDTH_KEY = 'genwriter_workbench_width';
 const WORKBENCH_COLLAPSED_KEY = 'genwriter_workbench_collapsed';
-const MIN_WORKBENCH_WIDTH = 320;
+const MIN_WORKBENCH_WIDTH = 340;
 const MAX_WORKBENCH_WIDTH = 680;
 const DEFAULT_WORKBENCH_WIDTH = 460;
 
@@ -16,7 +16,10 @@ const clampWorkbenchWidth = (value) =>
 
 const readSavedWorkbenchWidth = () => {
   if (typeof window === 'undefined') return DEFAULT_WORKBENCH_WIDTH;
-  const saved = Number(window.localStorage.getItem(WORKBENCH_WIDTH_KEY));
+  const raw = window.localStorage.getItem(WORKBENCH_WIDTH_KEY);
+  // 注意：Number(null) === 0 是有限数，直接用 Number.isFinite 判断会永远落回最小值
+  if (raw === null || raw === '') return DEFAULT_WORKBENCH_WIDTH;
+  const saved = Number(raw);
   return Number.isFinite(saved) ? clampWorkbenchWidth(saved) : DEFAULT_WORKBENCH_WIDTH;
 };
 

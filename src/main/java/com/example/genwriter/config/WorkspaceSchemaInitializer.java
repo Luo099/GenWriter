@@ -44,6 +44,11 @@ public class WorkspaceSchemaInitializer implements InitializingBean {
                 new ResourceDatabasePopulator(new ClassPathResource("db/project-knowledge-bases.sql")).execute(jdbc.getDataSource());
                 jdbc.update("INSERT INTO genwriter_schema_migration(version) VALUES (?)", knowledgeBaseVersion);
             }
+            String observabilityVersion = "20261125-ai-observability-v1";
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM genwriter_schema_migration WHERE version = ?", Integer.class, observabilityVersion) == 0) {
+                new ResourceDatabasePopulator(new ClassPathResource("db/ai-observability.sql")).execute(jdbc.getDataSource());
+                jdbc.update("INSERT INTO genwriter_schema_migration(version) VALUES (?)", observabilityVersion);
+            }
         });
     }
 }

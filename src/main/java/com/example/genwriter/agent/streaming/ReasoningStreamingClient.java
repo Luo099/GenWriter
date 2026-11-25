@@ -2,6 +2,9 @@ package com.example.genwriter.agent.streaming;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.core.ParameterizedTypeReference;
@@ -16,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -34,9 +38,11 @@ public class ReasoningStreamingClient {
     private static final String FINISH_STOP = "stop";
 
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
-    public ReasoningStreamingClient(ObjectMapper objectMapper) {
+    public ReasoningStreamingClient(ObjectMapper objectMapper, MeterRegistry meterRegistry) {
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     public record StreamingResult(String reasoningContent, String content) {}
@@ -52,18 +58,6 @@ public class ReasoningStreamingClient {
         void onContentChunk(String chunk);
     }
 
-    /**
-     * 流式调用推理模型 API，支持 reasoning_content 解析
-     *
-     * @param baseUrl          API 基础地址（不可为空）
-     * @param apiKey           API 密钥
-     * @param model            模型名称
-     * @param messages         消息列表
-     * @param temperature      温度参数
-     * @param enableThinking   是否启用思考模式（部分供应商特有参数）
-     * @param callback         内容回调
-     * @return 流式调用结果
-     */
     public StreamingResult stream(String baseUrl, String apiKey, String model,
                                   List<Map<String, String>> messages, double temperature,
                                   boolean enableThinking, ChunkCallback callback) {
@@ -101,6 +95,10 @@ public class ReasoningStreamingClient {
                                    List<Map<String, Object>> messages, Double temperature,
                                    boolean enableThinking, List<Map<String, Object>> tools,
                                    ChunkCallback callback) {
+        long startNanos = System.nanoTime();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            recordStream(model, "config_error", startNanos);
+        }
         String endpoint = resolveChatCompletionsUrl(baseUrl, apiCompatibility);
         RoundResult result = streamOnce(apiKey, model, messages, temperature, enableThinking,
                 tools, callback, endpoint);
@@ -112,6 +110,9 @@ public class ReasoningStreamingClient {
                         tools, callback, alternate);
             }
         }
+        String status = result == null ? "error"
+                : result.content().isEmpty() && result.toolCalls().isEmpty() ? "empty" : "success";
+        recordStream(model, status, startNanos);
         return result != null ? result : new RoundResult("", "", List.of(), null);
     }
 
@@ -124,7 +125,7 @@ public class ReasoningStreamingClient {
      */
     static String resolveChatCompletionsUrl(String baseUrl, String apiCompatibility) {
         if (baseUrl == null || baseUrl.isBlank()) {
-            throw new IllegalStateException("base-url 不能为空，请在 application.yml 中配置供应商的 base-url");
+            throw new IllegalStateException("base-url is required for reasoning streaming");
         }
         String base = baseUrl.replaceAll("/+$", "");
         if ("native".equalsIgnoreCase(apiCompatibility) || base.matches(".*/v\\d+$")) {
@@ -251,7 +252,6 @@ public class ReasoningStreamingClient {
                 }
             }
 
-            // 提取 content
             JsonNode contentNode = delta.get("content");
             if (contentNode != null && !contentNode.isNull()) {
                 String content = contentNode.asText("");
@@ -287,6 +287,24 @@ public class ReasoningStreamingClient {
         } catch (Exception e) {
             log.debug("Failed to parse SSE chunk: {}", e.getMessage());
         }
+    }
+
+    private void recordStream(String model, String status, long startNanos) {
+        Counter.builder("genwriter_reasoning_stream_requests_total")
+                .tag("model", safe(model))
+                .tag("status", status)
+                .register(meterRegistry)
+                .increment();
+        Timer.builder("genwriter_reasoning_stream_duration")
+                .tag("model", safe(model))
+                .tag("status", status)
+                .publishPercentileHistogram()
+                .register(meterRegistry)
+                .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private String safe(String value) {
+        return value == null || value.isBlank() ? "unknown" : value;
     }
 
     private static final class ToolCallAgg {

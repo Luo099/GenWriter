@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,14 +28,13 @@ public class ChapterSummaryServiceImpl implements ChapterSummaryService {
 
         try {
             ChatClient client = chatClientFactory.create(properties.getTemperature());
-            String summary = client.prompt()
-                    .system("""
+            String systemPrompt = """
                             你是通用写作的章节连续性摘要器，支持文章、报告、教程和小说。
                             只基于给定章节内容总结已经发生的叙事状态，不新增设定，不纠错，不评价。
                             输出一段自然中文文段，不要列表、标题、编号或 Markdown。
                             必须覆盖：本节主题与论点、关键事实或已发生内容、角色/对象状态、未完成事项和下一节接续点。
-                            """)
-                    .user("""
+                            """;
+            String userPrompt = """
                             用户本章写作要求：
                             %s
 
@@ -40,12 +42,19 @@ public class ChapterSummaryServiceImpl implements ChapterSummaryService {
 
                             章节内容：
                             %s
-                            """.formatted(safe(userInput), safe(writingType), finalOutput))
-                    .call()
-                    .content();
+                            """.formatted(safe(userInput), safe(writingType), finalOutput);
+
+            int timeoutSeconds = Math.max(1, properties.getTimeoutSeconds());
+            String summary = CompletableFuture.supplyAsync(() -> client.prompt()
+                            .system(systemPrompt)
+                            .user(userPrompt)
+                            .call()
+                            .content())
+                    .get(timeoutSeconds, TimeUnit.SECONDS);
             return truncate(clean(summary), properties.getMaxSummaryChars());
         } catch (Exception e) {
-            log.warn("章节摘要生成失败，跳过章节上下文: {}", e.getMessage());
+            log.warn("Chapter summary generation degraded; final content will be saved without continuity summary: {}",
+                    e.getMessage());
             return "";
         }
     }

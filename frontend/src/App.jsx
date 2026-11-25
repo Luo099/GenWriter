@@ -7,6 +7,7 @@ import KnowledgeBasePanel from './components/KnowledgeBasePanel';
 import SettingsPanel from './components/SettingsPanel';
 import WritingSkillLearningPanel from './components/WritingSkillLearningPanel';
 import SkillPanel from './components/SkillPanel';
+import ObservabilityPanel from './components/ObservabilityPanel';
 import ExportDialog from './components/ExportDialog';
 import { ToastProvider } from './components/ui/Toast';
 import { ConfirmProvider } from './components/ui/ConfirmDialog';
@@ -18,9 +19,18 @@ import { connectSSE } from './api/sse';
 /* ---------- sessionStorage 执行轨迹缓存 ---------- */
 const chainStorageKey = (sessionId) => `genwriter_chain_${sessionId}`;
 
-const saveChainToStorage = (sessionId, chainNodes, thinkingSteps, contentPrefix, sources, contentState = {}) => {
+const saveChainToStorage = (
+  sessionId,
+  traceEvents,
+  chainNodes,
+  thinkingSteps,
+  contentPrefix,
+  sources,
+  contentState = {}
+) => {
   try {
     const data = {
+      traceEvents: traceEvents || [],
       chainNodes: chainNodes || [],
       thinkingSteps: thinkingSteps || [],
       sources: sources || [],
@@ -268,13 +278,20 @@ function App() {
 
           // 从 sessionStorage 恢复最新的执行轨迹（覆盖后端数据，因为 sessionStorage 更实时）
           const cached = loadChainFromStorage(activeSession.id);
-          if (cached && cached.chainNodes?.length > 0) {
+          if (
+            cached && (
+              cached.traceEvents?.length > 0 ||
+              cached.chainNodes?.length > 0 ||
+              cached.thinkingSteps?.length > 0
+            )
+          ) {
             const lastAssistantIdx = mapped.reduce((last, m, i) =>
               m.role === 'assistant' ? i : last, -1
             );
             if (lastAssistantIdx >= 0) {
               mapped[lastAssistantIdx] = {
                 ...mapped[lastAssistantIdx],
+                traceEvents: cached.traceEvents || mapped[lastAssistantIdx].traceEvents || [],
                 chainNodes: cached.chainNodes,
                 thinkingSteps: cached.thinkingSteps || mapped[lastAssistantIdx].thinkingSteps || [],
                 sources: cached.sources || mapped[lastAssistantIdx].sources || [],
@@ -321,12 +338,14 @@ function App() {
     const msgs = [...messages];
     const lastAssistant = msgs.reverse().find((m) => m.role === 'assistant');
     if (lastAssistant && (
+      lastAssistant.traceEvents?.length > 0 ||
       lastAssistant.chainNodes?.length > 0 ||
       lastAssistant.thinkingSteps?.length > 0 ||
       lastAssistant.sources?.length > 0
     )) {
       saveChainToStorage(
         activeSession.id,
+        lastAssistant.traceEvents,
         lastAssistant.chainNodes,
         lastAssistant.thinkingSteps,
         lastAssistant.content?.substring(0, 100),
@@ -436,6 +455,32 @@ function App() {
 
           const ssePayload = payload.payload || {};
           const { data, statusText: st, done } = ssePayload;
+
+          if (payload.type === 'ERROR') {
+            const errorText = typeof data === 'string'
+              ? data
+              : (data?.message || st || '【明显提示】本轮任务失败，已停止生成。');
+            statusText = errorText;
+            setIsLoading(false);
+            setError(errorText);
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== assistantMsgId) return m;
+                const stepEntry = { text: errorText, data: data || null, timestamp: new Date().toISOString() };
+                return {
+                  ...m,
+                  content: m.content || errorText,
+                  statusText: errorText,
+                  contentStatus: 'ERROR',
+                  contentActivityText: errorText,
+                  isDraftStreaming: false,
+                  isStreaming: false,
+                  thinkingSteps: [...(m.thinkingSteps || []), stepEntry],
+                };
+              })
+            );
+            return;
+          }
 
           if (payload.type === 'TITLE_UPDATED') {
             const newTitle = typeof data === 'string' ? data : String(data);
@@ -862,6 +907,8 @@ function App() {
           />
         ) : view === 'skills' ? (
           <SkillPanel onBack={() => setView('chat')} />
+        ) : view === 'observability' ? (
+          <ObservabilityPanel onBack={() => setView('chat')} />
         ) : view === 'settings' ? (
           <SettingsPanel />
         ) : null}

@@ -150,11 +150,10 @@ public class StateGraphRunner {
      * @param writingType 写作类型（用于兼容旧流程事件类型）
      * @param webSearch   是否启用联网搜索
      */
-    public void run(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
+    public boolean run(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
         if (writingOutputSettingsService.isParallelChapterWritingEnabled()) {
             log.info("Supervisor 并行写章已开启，跳过会话锁: sessionId={}", sessionId);
-            runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
-            return;
+            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
         }
 
         ReentrantLock lock = sessionLocks.computeIfAbsent(sessionId, ignored -> new ReentrantLock(true));
@@ -165,7 +164,7 @@ public class StateGraphRunner {
             log.info("Supervisor 会话锁已获取: sessionId={}, waitMs={}", sessionId, waitMs);
         }
         try {
-            runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
+            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
         } finally {
             lock.unlock();
             if (!lock.hasQueuedThreads()) {
@@ -174,7 +173,7 @@ public class StateGraphRunner {
         }
     }
 
-    private void runSerial(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
+    private boolean runSerial(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
         sseService.startRun(sessionId);
         log.info("Supervisor 执行开始: sessionId={}, type={}, webSearch={}", sessionId, writingType, webSearch);
         publishStatus(sessionId, "【任务启动】开始处理用户请求...");
@@ -265,12 +264,14 @@ public class StateGraphRunner {
                 publishStatus(sessionId, "【任务结束】未产生输出");
             }
 
+            return true;
         } catch (Exception e) {
             log.error("Supervisor 执行失败: sessionId={}, error={}", sessionId, e.getMessage(), e);
             publishStatus(sessionId, "【任务失败】" + e.getMessage());
             String errorMessage = "处理失败：" + e.getMessage();
             persistErrorMessage(sessionId, errorMessage);
             sendErrorMessage(sessionId, errorMessage);
+            return false;
         } finally {
             // 无论成功/失败，释放本 session 的 trace 缓冲，防止内存泄漏
             // （成功路径已 drain 取走，此处对失败路径兜底；drain 已清空时 clear 为 no-op）

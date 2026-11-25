@@ -82,6 +82,19 @@ logging:
   file:
     name: logs/genwriter.log
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:GenWriter}
+
 app:
   embedding:
     default-model: qwen3.7-text-embedding-flash
@@ -137,6 +150,15 @@ retrieval:
     min-score-floor: 0.25
 
 genwriter:
+  observability:
+    enabled: true
+    trace-persistence-enabled: true
+    metrics-enabled: true
+    sse-trace-enabled: true
+    success-sample-rate: 1.0
+    retention-days: 14
+    text-summary-limit: 240
+    include-error-details: false
   llm:
     default-provider: dashscope
     default-model: qwen3.7-flash
@@ -144,6 +166,8 @@ genwriter:
     default-max-tokens: 65535
     models:
       - name: qwen3.7-flash
+        supportsVision: false
+      - name: qwen-plus
         supportsVision: false
       - name: qwen-turbo
         supportsVision: false
@@ -203,6 +227,7 @@ genwriter:
       max-summaries: 2
       max-summary-chars: 600
       temperature: 0.2
+      timeout-seconds: 8
   checkpoint:
     enabled: true
     key-prefix: "genwriter:graph:checkpoint:"
@@ -237,6 +262,7 @@ genwriter:
       max-queries: 5
       min-article-length: 500
       temperature: 0.1
+      timeout-seconds: 8
     writing-skill-extraction:
       enabled: true
       async: true

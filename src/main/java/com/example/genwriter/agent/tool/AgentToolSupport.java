@@ -20,6 +20,7 @@ public final class AgentToolSupport {
     public static final String SESSION_ID = "sessionId";
     public static final String CURRENT_SPAN_ID = "currentSpanId";
     public static final String CURRENT_AGENT_NAME = "currentAgentName";
+    public static final String WORKSPACE_RUN_ID = "workspaceRunId";
 
     private AgentToolSupport() {
     }
@@ -45,7 +46,7 @@ public final class AgentToolSupport {
         }
         Map<String, Object> toolContext = new HashMap<>(sessionContext(
                 SessionContextHolder.get(), SessionContextHolder.getCurrentSpanId(),
-                SessionContextHolder.getCurrentAgentName()));
+                SessionContextHolder.getCurrentAgentName(), SessionContextHolder.getWorkspaceRunId()));
         toolContext.put(WEB_SEARCH_ENABLED, webSearchEnabled);
         toolContext.put(KNOWLEDGE_BASE_IDS, knowledgeBaseIds);
         return promptSpec.toolContext(toolContext);
@@ -71,11 +72,20 @@ public final class AgentToolSupport {
             String sessionId,
             String currentSpanId,
             String currentAgentName) {
+        return sessionContext(sessionId, currentSpanId, currentAgentName, SessionContextHolder.getWorkspaceRunId());
+    }
+
+    public static Map<String, Object> sessionContext(
+            String sessionId,
+            String currentSpanId,
+            String currentAgentName,
+            String workspaceRunId) {
 
         return Map.of(
                 SESSION_ID, safe(sessionId),
                 CURRENT_SPAN_ID, safe(currentSpanId),
-                CURRENT_AGENT_NAME, safe(currentAgentName)
+                CURRENT_AGENT_NAME, safe(currentAgentName),
+                WORKSPACE_RUN_ID, safe(workspaceRunId)
         );
     }
 
@@ -87,10 +97,11 @@ public final class AgentToolSupport {
         String sessionId = stringValue(context.get(SESSION_ID));
         String currentSpanId = stringValue(context.get(CURRENT_SPAN_ID));
         String currentAgentName = stringValue(context.get(CURRENT_AGENT_NAME));
-        if (isBlank(sessionId) && isBlank(currentSpanId) && isBlank(currentAgentName)) {
+        String workspaceRunId = stringValue(context.get(WORKSPACE_RUN_ID));
+        if (isBlank(sessionId) && isBlank(currentSpanId) && isBlank(currentAgentName) && isBlank(workspaceRunId)) {
             return null;
         }
-        return new SessionContextHolder.ContextSnapshot(sessionId, currentSpanId, currentAgentName);
+        return new SessionContextHolder.ContextSnapshot(sessionId, currentSpanId, currentAgentName, workspaceRunId);
     }
 
     public static boolean isWebSearchEnabled(ToolContext toolContext) {

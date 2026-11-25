@@ -151,9 +151,20 @@ public class StateGraphRunner {
      * @param webSearch   是否启用联网搜索
      */
     public boolean run(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
+        return run(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target,
+                null, null, null);
+    }
+
+    public boolean run(String sessionId, String documentId, MultimodalContent userInput,
+                       List<String> knowledgeBaseIds, String writingType, boolean webSearch,
+                       WritingTarget target,
+                       com.example.genwriter.model.enums.AssistantMode mode,
+                       String activeNodeId,
+                       String activeUnsavedPreview) {
         if (writingOutputSettingsService.isParallelChapterWritingEnabled()) {
             log.info("Supervisor 并行写章已开启，跳过会话锁: sessionId={}", sessionId);
-            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
+            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target,
+                    mode, activeNodeId, activeUnsavedPreview);
         }
 
         ReentrantLock lock = sessionLocks.computeIfAbsent(sessionId, ignored -> new ReentrantLock(true));
@@ -164,7 +175,8 @@ public class StateGraphRunner {
             log.info("Supervisor 会话锁已获取: sessionId={}, waitMs={}", sessionId, waitMs);
         }
         try {
-            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target);
+            return runSerial(sessionId, documentId, userInput, knowledgeBaseIds, writingType, webSearch, target,
+                    mode, activeNodeId, activeUnsavedPreview);
         } finally {
             lock.unlock();
             if (!lock.hasQueuedThreads()) {
@@ -173,9 +185,15 @@ public class StateGraphRunner {
         }
     }
 
-    private boolean runSerial(String sessionId, String documentId, MultimodalContent userInput, List<String> knowledgeBaseIds, String writingType, boolean webSearch, WritingTarget target) {
+    private boolean runSerial(String sessionId, String documentId, MultimodalContent userInput,
+                              List<String> knowledgeBaseIds, String writingType, boolean webSearch,
+                              WritingTarget target,
+                              com.example.genwriter.model.enums.AssistantMode mode,
+                              String activeNodeId,
+                              String activeUnsavedPreview) {
         sseService.startRun(sessionId);
-        log.info("Supervisor 执行开始: sessionId={}, type={}, webSearch={}", sessionId, writingType, webSearch);
+        log.info("Supervisor 执行开始: sessionId={}, type={}, mode={}, webSearch={}",
+                sessionId, writingType, mode, webSearch);
         publishStatus(sessionId, "【任务启动】开始处理用户请求...");
 
         try {
@@ -185,7 +203,7 @@ public class StateGraphRunner {
             messageService.createMessage(sessionId, "user", userInput.getTextOnly());
 
             String context = buildContextFromMemory(sessionId);
-            if (target != null) context += workspaceService.writingContext(target);
+            if (target != null && mode == null) context += workspaceService.writingContext(target);
             if (selectedDocument != null) {
                 context = appendSelectedDocumentContext(context, selectedDocument);
             }
@@ -197,6 +215,10 @@ public class StateGraphRunner {
             inputs.put("multimodalContent", userInput);
             inputs.put("knowledgeBaseIds", knowledgeBaseIds == null ? List.of() : List.copyOf(knowledgeBaseIds));
             inputs.put("writingType", writingType != null ? writingType : "AUTO");
+            inputs.put("assistantMode", mode != null ? mode.name() : "");
+            inputs.put("activeNodeId", activeNodeId != null ? activeNodeId : (target != null && target.nodeId() != null ? target.nodeId() : ""));
+            inputs.put("activeUnsavedPreview", activeUnsavedPreview != null ? activeUnsavedPreview : "");
+            inputs.put("workspaceRunId", "");
             inputs.put("context", context);
             inputs.put("finalOutput", "");
             if (target != null) inputs.put("writingTarget", objectMapper.convertValue(target, Map.class));
@@ -232,7 +254,7 @@ public class StateGraphRunner {
                     // 取走本 session 累积的 trace 事件（含 reasoningContent），落库到 message metadata，
                     // 前端刷新页面后可从 metadata.traceEvents 恢复 trace 树与模型思考过程。
                     List<AgentTraceEvent> traceEvents = chainPublisher.drainTraceEvents(sessionId);
-                    String assistantMetadata = buildAssistantMetadata(chapterSummary, traceEvents);
+                    String assistantMetadata = buildAssistantMetadata(chapterSummary, traceEvents, state);
                     messageService.createMessage(sessionId, "assistant", finalOutput, assistantMetadata);
                     saveToMemory(sessionId, userInput, finalOutput, chapterSummary);
 
@@ -405,6 +427,12 @@ public class StateGraphRunner {
 
     private String buildAssistantMetadata(String chapterSummary,
                                           List<AgentTraceEvent> traceEvents) {
+        return buildAssistantMetadata(chapterSummary, traceEvents, null);
+    }
+
+    private String buildAssistantMetadata(String chapterSummary,
+                                          List<AgentTraceEvent> traceEvents,
+                                          OverAllState state) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         Map<String, Object> chapterMeta = assistantMetadataMap(chapterSummary);
         if (chapterMeta != null) {
@@ -413,6 +441,33 @@ public class StateGraphRunner {
         // trace 事件落库：前端从 metadata.traceEvents 恢复 trace 树与 reasoningContent
         if (traceEvents != null && !traceEvents.isEmpty()) {
             metadata.put("traceEvents", traceEvents);
+        }
+        if (state != null) {
+            state.value("assistantMode", String.class)
+                    .filter(v -> !v.isBlank())
+                    .ifPresent(v -> metadata.put("assistantMode", v));
+            state.value("ghostwriteApplyMode", String.class)
+                    .filter(v -> !v.isBlank())
+                    .ifPresent(v -> metadata.put("ghostwriteApplyMode", v));
+            state.value("workspaceRunId", String.class)
+                    .filter(v -> !v.isBlank())
+                    .ifPresent(v -> metadata.put("workspaceRunId", v));
+            state.value("workspaceChangeSet", Object.class)
+                    .ifPresent(cs -> metadata.put("workspaceChangeSet", cs));
+            state.value("workspaceTouchedNodeIds", Object.class)
+                    .ifPresent(ids -> metadata.put("workspaceTouchedNodeIds", ids));
+            state.value("researchSources", String.class)
+                    .filter(v -> !v.isBlank())
+                    .ifPresent(sourcesJson -> {
+                        try {
+                            List<Map<String, String>> sources = objectMapper.readValue(
+                                    sourcesJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                            if (!sources.isEmpty()) {
+                                metadata.put("sources", sources);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
         }
         if (metadata.isEmpty()) {
             return null;

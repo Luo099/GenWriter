@@ -574,6 +574,18 @@ public class ThoughtChainPublisher {
             case "update_writing_skill" -> "保存写作技巧";
             case "save_setting_detail" -> "保存设定细节";
             case "read_skill_detail" -> "读取 Skill 详情";
+            case "workspace_outline" -> "查看作品目录";
+            case "workspace_read" -> "阅读章节内容";
+            case "workspace_search" -> "检索工作区正文";
+            case "workspace_patch" -> "局部修改章节";
+            case "workspace_write" -> "写入章节正文";
+            case "workspace_tree" -> "调整章节目录";
+            case "call_researcher" -> "委派资料调研";
+            case "call_reviewer" -> "委派内容评审";
+            case "call_skill_extractor" -> "提取写作技巧";
+            case "call_outline_planner" -> "委派大纲构思";
+            case "call_draft_writer" -> "委派正文起草";
+            case "call_polisher" -> "委派润色精修";
             default -> toolName;
         };
     }

@@ -81,6 +81,26 @@ public class WorkspaceController {
         return ApiResponse.success(workspace.adopt(projectId, candidateId));
     }
 
+    @GetMapping("/changesets")
+    public ApiResponse<List<ChangeSet>> changeSets(@PathVariable String projectId) {
+        return ApiResponse.success(workspace.listChangeSets(projectId));
+    }
+
+    @PostMapping("/changesets/{changeSetId}/adopt")
+    public ApiResponse<ChangeSet> adoptChangeSet(@PathVariable String projectId, @PathVariable String changeSetId) {
+        return ApiResponse.success(workspace.adoptChangeSet(projectId, changeSetId));
+    }
+
+    @PostMapping("/changesets/{changeSetId}/discard")
+    public ApiResponse<ChangeSet> discardChangeSet(@PathVariable String projectId, @PathVariable String changeSetId) {
+        return ApiResponse.success(workspace.discardChangeSet(projectId, changeSetId));
+    }
+
+    @PostMapping("/changesets/{changeSetId}/rollback")
+    public ApiResponse<ChangeSet> rollbackChangeSet(@PathVariable String projectId, @PathVariable String changeSetId) {
+        return ApiResponse.success(workspace.rollbackChangeSet(projectId, changeSetId));
+    }
+
     @GetMapping("/reading")
     public ApiResponse<Map<String, String>> reading(@PathVariable String projectId) {
         return ApiResponse.success(Map.of("title", projects.getProjectById(projectId).getName(), "content", workspace.wholeContent(projectId)));

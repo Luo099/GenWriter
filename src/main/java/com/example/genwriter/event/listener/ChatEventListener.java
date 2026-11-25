@@ -71,7 +71,10 @@ public class ChatEventListener {
                     event.getKnowledgeBaseIds(),
                     writingType,
                     event.isWebSearch(),
-                    event.getTarget()
+                    event.getTarget(),
+                    event.getMode(),
+                    event.getActiveNodeId(),
+                    event.getActiveUnsavedPreview()
             );
 
             long endedAt = System.currentTimeMillis();

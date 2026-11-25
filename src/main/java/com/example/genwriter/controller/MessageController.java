@@ -64,6 +64,9 @@ public class MessageController {
                 sessionId, type, webSearch, kbId, documentId);
         List<String> knowledgeBaseIds = projectKnowledgeBases.resolveForChat(sessionId, kbId);
         WritingTarget requested = request != null ? request.getTarget() : null;
+        com.example.genwriter.model.enums.AssistantMode requestedMode = request != null ? request.getMode() : null;
+        String activeNodeId = request != null ? request.getActiveNodeId() : null;
+        String activeUnsavedPreview = request != null ? request.getActiveUnsavedPreview() : null;
         if (type == ChatEvent.WritingType.KNOWLEDGE_QA) {
             if (request == null || request.getText() == null || request.getText().isBlank()) {
                 throw new BizException("400", "请先输入要检索的问题");
@@ -81,8 +84,14 @@ public class MessageController {
         } else {
             content = MultimodalContent.ofText("");
         }
-        var target = workspaceService.prepareTarget(sessionId, requested, documentId);
-        chatService.submitChatTask(sessionId, documentId, content, type, webSearch, knowledgeBaseIds, target);
+        WritingTarget target = requestedMode != null && requested == null
+                ? workspaceService.prepareModeTarget(sessionId, requestedMode, activeNodeId, documentId)
+                : workspaceService.prepareTarget(sessionId, requested, documentId);
+        String resolvedActiveNodeId = activeNodeId != null && !activeNodeId.isBlank()
+                ? activeNodeId
+                : (target != null ? target.nodeId() : null);
+        chatService.submitChatTask(sessionId, documentId, content, type, webSearch, knowledgeBaseIds, target,
+                requestedMode, resolvedActiveNodeId, activeUnsavedPreview);
         return ApiResponse.success(null);
     }
 

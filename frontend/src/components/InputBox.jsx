@@ -4,12 +4,9 @@ import SelectField from './SelectField';
 import { uploadAttachment, deleteAttachment, getThumbnailUrl } from '../api/attachments';
 import { ArrowUp, Globe2, Paperclip } from 'lucide-react';
 
-const MODES = [
-  { value: 'AUTO', label: '自动' },
-  { value: 'CREATE', label: '创作' },
-  { value: 'CONTINUE', label: '续写' },
-  { value: 'POLISH', label: '润色' },
-  { value: 'KNOWLEDGE_QA', label: '知识问答' },
+const ASSISTANT_MODES = [
+  { value: 'CHAT', label: '对话' },
+  { value: 'GHOSTWRITE', label: '代笔' },
 ];
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -18,9 +15,19 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
-const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
+const InputBox = ({
+  onSend,
+  disabled,
+  isLoading,
+  sessionId = '',
+  assistantMode: controlledMode,
+  onAssistantModeChange,
+  targetHint = '',
+}) => {
   const [inputValue, setInputValue] = useState('');
-  const [mode, setMode] = useState('AUTO');
+  const [localMode, setLocalMode] = useState('CHAT');
+  const assistantMode = controlledMode || localMode;
+  const setAssistantMode = onAssistantModeChange || setLocalMode;
   const [webSearch, setWebSearch] = useState(true);
   const [attachments, setAttachments] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -189,7 +196,7 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
 
     submitting.current = true;
     try {
-      const accepted = await onSend(trimmed, mode, webSearch, attachmentIds);
+      const accepted = await onSend(trimmed, controlledMode ? assistantMode : 'AUTO', webSearch, attachmentIds);
       if (accepted === false) return;
       setInputValue((current) => current.trim() === trimmed ? '' : current);
       setAttachments((current) => current.filter((attachment) => !attachmentIds.includes(attachment.id)));
@@ -248,10 +255,7 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
   };
 
   const canSend = (inputValue.trim() || attachments.some((a) => a.id && !a.error)) && !isLoading && !disabled && !isUploading;
-  const knowledgeQa = mode === 'KNOWLEDGE_QA';
-  const targetHint = knowledgeQa
-    ? '知识问答只回复会话'
-    : target?.value !== 'DISCUSS' ? target?.hint : '';
+  const isGhostwrite = assistantMode === 'GHOSTWRITE';
 
   return (
     <div className="input-container">
@@ -273,7 +277,7 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
           ref={textareaRef}
           className="input-textarea"
           aria-label="给助手发消息"
-          placeholder={knowledgeQa ? '输入要检索的问题…' : '给助手发消息…'}
+          placeholder={isGhostwrite ? '描述想让代笔 Agent 修改或创作的内容…' : '结合当前作品讨论构思、分析段落或查资料…'}
           title="Enter 发送，Shift + Enter 换行"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
@@ -286,11 +290,8 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
         {targetHint && <p className="composer-target-hint" title={targetHint} role="status">{targetHint}</p>}
         <div className="composer-controls">
           <div className="composer-options">
-            {target && <SelectField className="composer-target" aria-label="写入目标" menuWidth={188}
-              value={knowledgeQa ? 'DISCUSS' : target.value} options={target.options}
-              disabled={disabled || isLoading || knowledgeQa} onChange={target.onChange} />}
-            <SelectField className="composer-mode" aria-label="创作模式" menuWidth={148}
-              value={mode} options={MODES} disabled={disabled || isLoading} onChange={setMode} />
+            <SelectField className={`composer-mode ${isGhostwrite ? 'is-ghostwrite' : ''}`} aria-label="助手模式" menuWidth={136}
+              value={assistantMode} options={ASSISTANT_MODES} disabled={disabled || isLoading} onChange={setAssistantMode} />
           </div>
           <div className="composer-actions">
           <button

@@ -6,6 +6,7 @@ import com.example.genwriter.agent.chain.ThoughtChainPublisher;
 import com.example.genwriter.agent.chatclient.ChatClientFactory;
 import com.example.genwriter.agent.memory.LongTermMemoryPromptFormatter;
 import com.example.genwriter.agent.memory.LongTermMemoryProperties;
+import com.example.genwriter.agent.orchestrator.WorkspaceAgentOrchestrator;
 import com.example.genwriter.agent.react.ReactLoop;
 import com.example.genwriter.agent.react.ReactStep;
 import com.example.genwriter.agent.skill.NovelWritingPromptSupport;
@@ -65,6 +66,7 @@ public class SupervisorNode implements NodeAction {
     private final SkillService skillService;
     private final WritingOutputSettingsService writingOutputSettingsService;
     private final ReasoningChatModelDecorator reasoningChatModelDecorator;
+    private final WorkspaceAgentOrchestrator workspaceAgentOrchestrator;
 
     private ChatClient chatClient;
     private String systemPrompt;
@@ -183,6 +185,58 @@ public class SupervisorNode implements NodeAction {
         String supervisorNodeId = chainPublisher.publishStart(sessionId, "任务规划",
                 ChainNode.Type.PLANNING, null,
                 Map.of("userInput", truncate((String) accumulated.getOrDefault("userInput", ""), 200)));
+
+        String assistantModeStr = state.value("assistantMode", String.class).orElse("");
+        Map<?, ?> targetMap = state.value("writingTarget", Map.class).orElse(Map.of());
+        Object projectIdObj = targetMap.get("projectId");
+        if (!assistantModeStr.isBlank() && projectIdObj != null && !String.valueOf(projectIdObj).isBlank()) {
+            com.example.genwriter.model.enums.AssistantMode assistantMode =
+                    com.example.genwriter.model.enums.AssistantMode.valueOf(
+                            assistantModeStr.trim().toUpperCase(java.util.Locale.ROOT));
+            chainPublisher.publishComplete(sessionId, supervisorNodeId,
+                    Map.of("action", assistantMode.name(),
+                            "reasoning", "工作区统一模式路由至" + (assistantMode == com.example.genwriter.model.enums.AssistantMode.GHOSTWRITE ? "代笔 Agent" : "对话助手")));
+            String activeNodeId = state.value("activeNodeId", String.class)
+                    .filter(s -> !s.isBlank())
+                    .orElseGet(() -> targetMap.get("nodeId") != null ? String.valueOf(targetMap.get("nodeId")) : "");
+            String activeUnsavedPreview = state.value("activeUnsavedPreview", String.class).orElse("");
+            @SuppressWarnings("unchecked")
+            List<String> kbIds = (List<String>) accumulated.getOrDefault("knowledgeBaseIds", List.of());
+            com.example.genwriter.model.dto.MultimodalContent multimodal =
+                    state.value("multimodalContent", com.example.genwriter.model.dto.MultimodalContent.class)
+                            .orElse(com.example.genwriter.model.dto.MultimodalContent.ofText(userInput));
+            String chapterSummary = state.value("context", String.class).orElse("");
+            WorkspaceAgentOrchestrator.OrchestratorResult orchResult = workspaceAgentOrchestrator.run(
+                    new WorkspaceAgentOrchestrator.RunRequest(
+                            sessionId,
+                            String.valueOf(projectIdObj),
+                            activeNodeId,
+                            activeUnsavedPreview,
+                            assistantMode,
+                            null,
+                            webSearch,
+                            kbIds,
+                            multimodal,
+                            userInput,
+                            chapterSummary,
+                            supervisorNodeId
+                    ));
+            accumulated.put("finalOutput", orchResult.assistantContent());
+            if (!orchResult.collectedSources().isEmpty()) {
+                accumulated.put("researchSources", objectMapper.writeValueAsString(orchResult.collectedSources()));
+            }
+            accumulated.put("workspaceRunId", orchResult.runId());
+            accumulated.put("assistantMode", orchResult.mode().name());
+            accumulated.put("ghostwriteApplyMode", orchResult.applyMode().name());
+            if (orchResult.changeSet() != null) {
+                accumulated.put("workspaceChangeSet", orchResult.changeSet());
+            }
+            if (orchResult.touchedNodeIds() != null && !orchResult.touchedNodeIds().isEmpty()) {
+                accumulated.put("workspaceTouchedNodeIds", orchResult.touchedNodeIds());
+            }
+            accumulated.put("currentNode", "SupervisorNode");
+            return accumulated;
+        }
 
         if ("KNOWLEDGE_QA".equals(writingType)) {
             chainPublisher.publishComplete(sessionId, supervisorNodeId,

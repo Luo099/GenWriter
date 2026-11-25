@@ -44,22 +44,26 @@ public class SsePublishNode implements NodeAction {
         String sessionId = state.value("sessionId", String.class).orElse("");
         String documentId = state.value("documentId", String.class).orElse(null);
         String finalOutput = state.value("finalOutput", String.class).orElse("");
+        String workspaceRunId = state.value("workspaceRunId", String.class).orElse("");
+        boolean handledByWorkspaceAgent = !workspaceRunId.isBlank();
 
         if (finalOutput != null && !finalOutput.isBlank()) {
             DocumentDTO generatedDocument = null;
             Candidate candidate = null;
             Map<?, ?> targetData = state.value("writingTarget", Map.class).orElse(Map.of());
             try {
-                if (!targetData.isEmpty()) {
+                if (!handledByWorkspaceAgent && !targetData.isEmpty()) {
                     WritingTarget target = objectMapper.convertValue(targetData, WritingTarget.class);
-                    if (!"DISCUSS".equals(target.operation()) && !isKnowledgeQaResult(state)) {
+                    if (!"DISCUSS".equals(target.operation())
+                            && !"AGENT".equalsIgnoreCase(target.operation())
+                            && !isKnowledgeQaResult(state)) {
                         String title = "CREATE_NODE".equals(target.operation())
                                 ? deriveContinuedTitle(state.value("selectedDocumentTitle", String.class).orElse(""), finalOutput)
                                 : state.value("selectedDocumentTitle", String.class).filter(value -> !value.isBlank()).orElse("正文");
                         candidate = workspaceService.createCandidate(sessionId, target, title, finalOutput,
                                 state.value("userInput", String.class).orElse(""), state.value("outputFormat", String.class).orElse("markdown"));
                     }
-                } else {
+                } else if (!handledByWorkspaceAgent) {
                     generatedDocument = createGeneratedDocumentVersion(state, sessionId, documentId, finalOutput);
                 }
             } catch (Exception e) {
@@ -88,14 +92,39 @@ public class SsePublishNode implements NodeAction {
                 }
             }
 
-            contentStreamPublisher.publishFinal(
-                    sessionId,
-                    finalOutput,
-                    data.get("document"),
-                    data.get("sources"),
-                    generatedDocument != null ? generatedDocument.getId() : documentId,
-                    candidate
-            );
+            Map<String, Object> extraFields = new LinkedHashMap<>();
+            if (handledByWorkspaceAgent) {
+                extraFields.put("workspaceRunId", workspaceRunId);
+                state.value("assistantMode", String.class)
+                        .ifPresent(v -> extraFields.put("assistantMode", v));
+                state.value("ghostwriteApplyMode", String.class)
+                        .ifPresent(v -> extraFields.put("ghostwriteApplyMode", v));
+                state.value("workspaceChangeSet", Object.class)
+                        .ifPresent(cs -> extraFields.put("changeSet", cs));
+                state.value("workspaceTouchedNodeIds", Object.class)
+                        .ifPresent(ids -> extraFields.put("touchedNodeIds", ids));
+            }
+
+            if (extraFields.isEmpty()) {
+                contentStreamPublisher.publishFinal(
+                        sessionId,
+                        finalOutput,
+                        data.get("document"),
+                        data.get("sources"),
+                        generatedDocument != null ? generatedDocument.getId() : documentId,
+                        candidate
+                );
+            } else {
+                contentStreamPublisher.publishFinal(
+                        sessionId,
+                        finalOutput,
+                        data.get("document"),
+                        data.get("sources"),
+                        generatedDocument != null ? generatedDocument.getId() : documentId,
+                        candidate,
+                        extraFields
+                );
+            }
             log.debug("SSE 内容已发布: sessionId={}, length={}", sessionId, finalOutput.length());
         }
 

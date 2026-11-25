@@ -159,6 +159,109 @@ export function CandidateDialog({ candidate, workspace, onClose }) {
   </WorkspaceModal>;
 }
 
+const CHANGE_ACTION_LABELS = {
+  PATCH_CONTENT: '局部修改',
+  WRITE_CONTENT: '整章重写',
+  CREATE_NODE: '新建章节',
+  RENAME_NODE: '重命名',
+  MOVE_NODE: '移动排序',
+  DELETE_NODE: '删除节点',
+};
+
+const CHANGE_STATUS_LABELS = {
+  PENDING: '待审查',
+  APPLIED: '已生效',
+  ROLLED_BACK: '已撤销',
+  DISCARDED: '已放弃',
+};
+
+export function ChangeSetDialog({ changeSet, workspace, onClose }) {
+  const [busyAction, setBusyAction] = useState('');
+  const [error, setError] = useState('');
+  const liveChangeSet = workspace.changeSets?.find((cs) => cs.id === changeSet.id) || changeSet;
+  const items = liveChangeSet.items || [];
+  const status = liveChangeSet.status || 'PENDING';
+  const hasDirtyTarget = status === 'PENDING' && items.some(
+    (item) => item.action !== 'CREATE_NODE' && item.targetNodeId && workspace.drafts[item.targetNodeId]?.dirty,
+  );
+
+  const runAction = async (actionKey, fn) => {
+    setBusyAction(actionKey);
+    setError('');
+    try {
+      await fn(liveChangeSet);
+      if (actionKey === 'discard' || actionKey === 'rollback') {
+        onClose();
+      }
+    } catch (failure) {
+      setError(failure.message || '操作失败');
+      await workspace.refresh().catch(() => {});
+    } finally {
+      setBusyAction('');
+    }
+  };
+
+  return <WorkspaceModal title={`代笔变更详情 · ${CHANGE_STATUS_LABELS[status] || status}`} wide
+    onClose={() => { if (!busyAction) onClose(); }} footer={<>
+      <span className="workspace-muted">
+        {liveChangeSet.applyMode === 'STAGED_CANDIDATE' ? '待审变更集（原子采纳/放弃）' : '直接快照变更集（支持整轮一键撤销）'}
+      </span>
+      <button type="button" onClick={onClose} disabled={Boolean(busyAction)}>关闭</button>
+      {status === 'PENDING' && <>
+        <button type="button" disabled={Boolean(busyAction)}
+          onClick={() => runAction('discard', workspace.discardChangeSet)}>
+          {busyAction === 'discard' ? '放弃中…' : '放弃全部'}
+        </button>
+        <button className="workspace-primary" type="button" disabled={Boolean(busyAction) || hasDirtyTarget}
+          onClick={() => runAction('adopt', workspace.adoptChangeSet)}>
+          {busyAction === 'adopt' ? '采纳中…' : '全部采纳'}
+        </button>
+      </>}
+      {status === 'APPLIED' && (
+        <button type="button" className="danger" disabled={Boolean(busyAction)}
+          onClick={() => runAction('rollback', workspace.rollbackChangeSet)}>
+          {busyAction === 'rollback' ? '撤销中…' : '撤销本轮修改'}
+        </button>
+      )}
+    </>}>
+    <p className="workspace-muted">
+      {liveChangeSet.summary || '工作区变更'} · 共 {items.length} 项改动
+    </p>
+    {hasDirtyTarget && <p className="workspace-error" role="alert">涉及的章节存在未保存修改，请先在编辑器保存后刷新再采纳。</p>}
+    {error && <p className="workspace-error" role="alert">{error}</p>}
+    <div className="changeset-items-list">
+      {items.map((item) => {
+        const nodeTitle = workspace.nodes.find((n) => n.id === item.targetNodeId)?.title || item.title || '未命名节点';
+        const stats = item.stats || {};
+        const lines = (item.diffPreview || '').split('\n');
+        return <section className="changeset-item-panel" key={item.id}>
+          <header className="changeset-item-header">
+            <div>
+              <span className="changeset-action-badge">{CHANGE_ACTION_LABELS[item.action] || item.action}</span>
+              <strong>{nodeTitle}</strong>
+            </div>
+            <div className="changeset-item-stats">
+              {stats.addedLines > 0 && <span className="diff-stat-add">+{stats.addedLines}</span>}
+              {stats.removedLines > 0 && <span className="diff-stat-del">-{stats.removedLines}</span>}
+            </div>
+          </header>
+          {stats.reason && <p className="changeset-item-reason">{stats.reason}</p>}
+          {item.diffPreview ? (
+            <pre className="changeset-diff-viewer">{lines.map((line, idx) => {
+              const cls = line.startsWith('+') && !line.startsWith('+++') ? 'diff-line-add'
+                : line.startsWith('-') && !line.startsWith('---') ? 'diff-line-del'
+                : line.startsWith('@@') ? 'diff-line-hunk' : 'diff-line-ctx';
+              return <div key={idx} className={cls}>{line || ' '}</div>;
+            })}</pre>
+          ) : item.content ? (
+            <pre className="changeset-diff-viewer"><div className="diff-line-add">{item.content}</div></pre>
+          ) : null}
+        </section>;
+      })}
+    </div>
+  </WorkspaceModal>;
+}
+
 export function LegacyDialog({ workspace, onClose }) {
   const [documents, setDocuments] = useState([]);
   const [selected, setSelected] = useState(null);

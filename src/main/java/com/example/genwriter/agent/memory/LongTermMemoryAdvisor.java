@@ -13,8 +13,11 @@ import org.springframework.ai.chat.client.advisor.api.AdvisedRequest;
 import org.springframework.ai.chat.client.advisor.api.AdvisedResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain;
+import org.springframework.ai.chat.client.advisor.api.StreamAroundAdvisor;
+import org.springframework.ai.chat.client.advisor.api.StreamAroundAdvisorChain;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class LongTermMemoryAdvisor implements CallAroundAdvisor {
+public class LongTermMemoryAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
 
     private final LongTermMemoryService memoryService;
     private final LongTermMemoryPromptFormatter promptFormatter;
@@ -91,9 +94,18 @@ public class LongTermMemoryAdvisor implements CallAroundAdvisor {
 
     @Override
     public AdvisedResponse aroundCall(AdvisedRequest request, CallAroundAdvisorChain chain) {
+        return chain.nextAroundCall(enhanceRequest(request));
+    }
+
+    @Override
+    public Flux<AdvisedResponse> aroundStream(AdvisedRequest request, StreamAroundAdvisorChain chain) {
+        return chain.nextAroundStream(enhanceRequest(request));
+    }
+
+    private AdvisedRequest enhanceRequest(AdvisedRequest request) {
         List<String> queries = resolveQueries(request);
         if (queries.isEmpty()) {
-            return chain.nextAroundCall(request);
+            return request;
         }
 
         try {
@@ -122,38 +134,36 @@ public class LongTermMemoryAdvisor implements CallAroundAdvisor {
 
             if (merged.isEmpty()) {
                 publishProbe(queries, queryResults, List.of(), 0);
-                return chain.nextAroundCall(request);
+                return request;
             }
 
             // 多 query 全局收敛：全局重排 + 门控 + 全局 topN 截断，消除 N×topK 注入放大
             List<MemoryVO> converged = converge(queries, merged);
             if (converged == null) {
                 publishProbe(queries, queryResults, List.of(), 0);
-                return chain.nextAroundCall(request);
+                return request;
             }
             if (converged.isEmpty()) {
                 publishProbe(queries, queryResults, List.of(), 0);
-                return chain.nextAroundCall(request);
+                return request;
             }
 
             String memoryContext = promptFormatter.format(converged);
             if (memoryContext.isBlank()) {
                 publishProbe(queries, queryResults, probeItems(converged), 0);
-                return chain.nextAroundCall(request);
+                return request;
             }
             publishProbe(queries, queryResults, probeItems(converged), converged.size());
             String baseSystemText = request.systemText() != null ? request.systemText() : "";
             String enhancedSystemText = baseSystemText.isBlank()
                     ? memoryContext
                     : baseSystemText + "\n\n" + memoryContext;
-            AdvisedRequest enhancedRequest = AdvisedRequest.from(request)
+            return AdvisedRequest.from(request)
                     .systemText(enhancedSystemText)
                     .build();
-
-            return chain.nextAroundCall(enhancedRequest);
         } catch (Exception e) {
             log.warn("长期记忆检索失败，跳过注入: {}", e.getMessage());
-            return chain.nextAroundCall(request);
+            return request;
         }
     }
 

@@ -49,6 +49,7 @@ replay_pid*.log
 
 ### Writing / Docs ###
 .writing/
+.genwriter/
 
 ### Claude Code ###
 .claude/

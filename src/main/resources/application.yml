@@ -269,6 +269,8 @@ genwriter:
       max-skills-per-turn: 3
       temperature: 0.2
   skills:
+    dir: .genwriter/skills
+    state-file: .genwriter/skill_states.json
     external-dir: ""
   prompts:
     writing-skill-extraction-prompt: |

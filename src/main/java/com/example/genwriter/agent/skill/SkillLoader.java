@@ -1,6 +1,8 @@
 package com.example.genwriter.agent.skill;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -21,9 +23,22 @@ import java.util.stream.Collectors;
 public class SkillLoader {
 
     private static final String BUILTIN_RESOURCE_PATTERN = "classpath:skills/*.md";
+    static final String DEFAULT_SKILLS_DIR = ".genwriter/skills";
 
     private final Map<String, SkillResource> allSkills = new ConcurrentHashMap<>();
+    private final String configuredSkillsDir;
     private Path skillsDir;
+
+    public SkillLoader() {
+        this(DEFAULT_SKILLS_DIR);
+    }
+
+    @Autowired
+    public SkillLoader(@Value("${genwriter.skills.dir:" + DEFAULT_SKILLS_DIR + "}") String configuredSkillsDir) {
+        this.configuredSkillsDir = (configuredSkillsDir == null || configuredSkillsDir.isBlank())
+                ? DEFAULT_SKILLS_DIR
+                : configuredSkillsDir.trim();
+    }
 
     @PostConstruct
     public void loadAll() {
@@ -34,8 +49,7 @@ public class SkillLoader {
     }
 
     private Path resolveSkillsDir() {
-        String userHome = System.getProperty("user.home");
-        return Path.of(userHome, ".genwriter", "skills");
+        return Path.of(configuredSkillsDir).toAbsolutePath().normalize();
     }
 
     /**

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,8 +21,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SkillService {
 
+    static final String DEFAULT_STATE_FILE = ".genwriter/skill_states.json";
+
     private final SkillLoader skillLoader;
     private final ObjectMapper objectMapper;
+
+    @Value("${genwriter.skills.state-file:" + DEFAULT_STATE_FILE + "}")
+    private String configuredStateFile = DEFAULT_STATE_FILE;
 
     private final Map<String, Boolean> enabledState = new ConcurrentHashMap<>();
     private Path stateFilePath;
@@ -30,10 +36,7 @@ public class SkillService {
     public void init() {
         stateFilePath = resolveStateFilePath();
         loadState();
-
-        for (SkillResource skill : skillLoader.getAll()) {
-            enabledState.putIfAbsent(skill.getName(), true);
-        }
+        syncEnabledStates();
         saveState();
         log.info("[SkillService] 初始化完成，共 {} 个 skill", enabledState.size());
     }
@@ -41,8 +44,14 @@ public class SkillService {
     // ---- 持久化 ----
 
     private Path resolveStateFilePath() {
-        String userHome = System.getProperty("user.home");
-        return Path.of(userHome, ".genwriter", "skill_states.json");
+        if (configuredStateFile != null && !configuredStateFile.isBlank()) {
+            return Path.of(configuredStateFile.trim()).toAbsolutePath().normalize();
+        }
+        Path skillsDir = skillLoader.getSkillsDir();
+        if (skillsDir != null && skillsDir.getParent() != null) {
+            return skillsDir.getParent().resolve("skill_states.json");
+        }
+        return Path.of(DEFAULT_STATE_FILE).toAbsolutePath().normalize();
     }
 
     private void loadState() {
@@ -217,6 +226,16 @@ public class SkillService {
         return skill.getContent();
     }
 
+    private void syncEnabledStates() {
+        Set<String> loadedNames = skillLoader.getAll().stream()
+                .map(SkillResource::getName)
+                .collect(Collectors.toSet());
+        enabledState.keySet().retainAll(loadedNames);
+        for (String name : loadedNames) {
+            enabledState.putIfAbsent(name, true);
+        }
+    }
+
     // ---- reload ----
 
     public Map<String, Object> reload() {
@@ -224,9 +243,7 @@ public class SkillService {
         skillLoader.reload();
         int after = skillLoader.getAll().size();
 
-        for (SkillResource skill : skillLoader.getAll()) {
-            enabledState.putIfAbsent(skill.getName(), true);
-        }
+        syncEnabledStates();
         saveState();
 
         return Map.of(

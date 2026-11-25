@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Pencil, Trash2, X } from 'lucide-react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as memoriesApi from '../api/memories';
 import SelectField from './SelectField';
 import PageHeading from './PageHeading';
@@ -20,10 +22,10 @@ const SCOPE_MAP = {
   PROJECT: '项目',
 };
 
-const IMPORTANCE_COLOR = {
-  HIGH: '#dc2626',
-  MEDIUM: '#d97706',
-  LOW: '#16a34a',
+const IMPORTANCE_CLASS = {
+  HIGH: 'importance-high',
+  MEDIUM: 'importance-medium',
+  LOW: 'importance-low',
 };
 
 const IMPORTANCE_LABEL = {
@@ -38,6 +40,7 @@ function MemoryPreview({ content = '' }) {
 }
 
 const MemoryPanel = ({ projectId, onBack }) => {
+  const confirm = useConfirm();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -181,7 +184,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('确定要删除这条记忆吗？')) return;
+    if (!await confirm('确定要删除这条记忆吗？')) return;
     setDeletingId(id);
     try {
       await memoriesApi.deleteMemory(id);
@@ -195,7 +198,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`确定要删除选中的 ${selectedIds.size} 条记忆吗？`)) return;
+    if (!await confirm(`确定要删除选中的 ${selectedIds.size} 条记忆吗？`)) return;
     try {
       await memoriesApi.batchDeleteMemories(Array.from(selectedIds));
       fetchMemories();
@@ -233,10 +236,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
       <div className="memory-toolbar">
         <div className="memory-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
+          <Search size={16} strokeWidth={2} className="search-icon" />
           <input
             type="text"
             placeholder="搜索记忆内容..."
@@ -306,8 +306,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                 </div>
                 <div className="memory-card-importance">
                   <span
-                    className="memory-importance-dot"
-                    style={{ background: IMPORTANCE_COLOR[m.importance] || '#999' }}
+                    className={`memory-importance-dot ${IMPORTANCE_CLASS[m.importance] || 'importance-none'}`}
                   />
                   {IMPORTANCE_LABEL[m.importance] || m.importance}
                 </div>
@@ -316,10 +315,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                 </div>
                 <div className="memory-card-actions">
                   <button className="memory-action-btn" onClick={() => handleOpenEdit(m)} title="编辑">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
+                    <Pencil size={14} strokeWidth={2} />
                   </button>
                   <button
                     className="memory-action-btn memory-action-delete"
@@ -327,10 +323,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                     disabled={deletingId === m.id}
                     title="删除"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+                    <Trash2 size={14} strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -364,10 +357,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
             <div className="memory-modal-header">
               <h1 className="dialog-title">{editingMemory ? '编辑记忆' : '新建记忆'}</h1>
               <button className="memory-modal-close" aria-label="关闭对话框" onClick={handleCloseModal}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
             <div className="memory-modal-body">

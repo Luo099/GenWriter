@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import KnowledgeBaseDetail from './KnowledgeBaseDetail';
 import SelectField from './SelectField';
 import PageHeading from './PageHeading';
 import DialogSurface from './DialogSurface';
 import EmptyState from './EmptyState';
-import { Library, ArrowUpRight, Pencil, Trash2 } from 'lucide-react';
+import { Library, ArrowUpRight, Pencil, Trash2, Search, X } from 'lucide-react';
 
 const KB_TYPE_MAP = {
   reference: '参考资料',
@@ -14,6 +15,7 @@ const KB_TYPE_MAP = {
 };
 
 const KnowledgeBasePanel = ({ onBack }) => {
+  const confirm = useConfirm();
   const [knowledgeBases, setKnowledgeBases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -130,7 +132,7 @@ const KnowledgeBasePanel = ({ onBack }) => {
   };
 
   const handleDelete = async (kb) => {
-    if (!window.confirm(`确定要删除知识库"${kb.name}"吗？`)) return;
+    if (!await confirm(`确定要删除知识库"${kb.name}"吗？`)) return;
     try {
       await knowledgeBasesApi.deleteKnowledgeBase(kb.id);
       fetchKnowledgeBases();
@@ -155,10 +157,7 @@ const KnowledgeBasePanel = ({ onBack }) => {
 
       <div className="memory-toolbar">
         <div className="memory-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
+          <Search size={16} strokeWidth={2} className="search-icon" />
           <input
             type="text"
             placeholder="搜索知识库名称..."
@@ -205,10 +204,7 @@ const KnowledgeBasePanel = ({ onBack }) => {
             <div className="memory-modal-header">
               <h1 className="dialog-title">{editingKB ? '编辑知识库' : '新建知识库'}</h1>
               <button className="memory-modal-close" aria-label="关闭对话框" onClick={handleCloseModal}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
             <div className="memory-modal-body">

@@ -8,6 +8,8 @@ import SettingsPanel from './components/SettingsPanel';
 import WritingSkillLearningPanel from './components/WritingSkillLearningPanel';
 import SkillPanel from './components/SkillPanel';
 import ExportDialog from './components/ExportDialog';
+import { ToastProvider } from './components/ui/Toast';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import * as sessionsApi from './api/sessions';
 import * as messagesApi from './api/messages';
 import * as projectsApi from './api/projects';
@@ -794,6 +796,8 @@ function App() {
   const clearError = () => setError(null);
 
   return (
+    <ToastProvider>
+    <ConfirmProvider>
     <div className="app-container">
       {error && (
         <div className="global-error" onClick={clearError}>
@@ -870,6 +874,8 @@ function App() {
         />
       )}
     </div>
+    </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

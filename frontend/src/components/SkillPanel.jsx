@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, RefreshCw, Search, Pencil, Trash2, ChevronDown, X, ChevronRight, Info } from 'lucide-react';
+import { useConfirm } from './ui/ConfirmDialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import * as skillsApi from '../api/skills';
@@ -70,7 +72,7 @@ const buildFrontmatterPreview = (formData, tags) => {
 
 const MarkdownPreview = ({ content }) => {
   if (!content || !content.trim()) {
-    return <div className="skill-preview-empty">Nothing to preview</div>;
+    return <div className="skill-preview-empty">暂无预览内容</div>;
   }
   return (
     <div className="skill-md-preview">
@@ -81,16 +83,13 @@ const MarkdownPreview = ({ content }) => {
 
 const GuidanceBar = ({ children }) => (
   <div className="skill-guidance-bar">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="16" x2="12" y2="12"></line>
-      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-    </svg>
+    <Info size={14} strokeWidth={2} />
     <span>{children}</span>
   </div>
 );
 
 const SkillPanel = ({ onBack }) => {
+  const confirm = useConfirm();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -314,7 +313,7 @@ const SkillPanel = ({ onBack }) => {
   };
 
   const handleDelete = async (skill) => {
-    if (!window.confirm(`确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`)) {
+    if (!await confirm(`确定要删除技能「${skill.displayName || skill.name}」吗？此操作不可撤销。`)) {
       return;
     }
     try {
@@ -337,36 +336,18 @@ const SkillPanel = ({ onBack }) => {
     <div className="skill-panel">
       <PageHeading title="技能管理" count={`${skills.length} 个`} onBack={onBack} actions={<div className="skill-panel-header-right">
           <button className="skill-new-btn" onClick={handleOpenCreate} title="新建技能">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <Plus size={16} strokeWidth={2} />
             新建技能
           </button>
           <button className="skill-reload-btn" onClick={handleReload} disabled={reloading} title="重新加载">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={reloading ? 'spinning' : ''}
-            >
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <polyline points="1 20 1 14 7 14"></polyline>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
+            <RefreshCw size={16} strokeWidth={2} className={reloading ? 'spinning' : ''} />
             {reloading ? '加载中...' : '重新加载'}
           </button>
         </div>} />
 
       <div className="skill-toolbar">
         <div className="skill-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
+          <Search size={16} strokeWidth={2} className="search-icon" />
           <input
             type="text"
             placeholder="搜索技能名称或描述..."
@@ -432,37 +413,21 @@ const SkillPanel = ({ onBack }) => {
                     onClick={() => handleOpenEdit(skill)}
                     title="编辑"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
+                    <Pencil size={14} strokeWidth={2} />
                   </button>
                   <button
                     className="skill-action-btn skill-action-btn-danger"
                     onClick={() => handleDelete(skill)}
                     title="删除"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+                    <Trash2 size={14} strokeWidth={2} />
                   </button>
                   <button
                     className="skill-detail-btn"
                     onClick={() => toggleExpand(skill.name)}
                     title={expandedName === skill.name ? '收起详情' : '查看详情'}
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className={expandedName === skill.name ? 'rotated' : ''}
-                    >
-                      <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
+                    <ChevronDown size={14} strokeWidth={2} className={expandedName === skill.name ? 'rotated' : ''} />
                     {expandedName === skill.name ? '收起' : '详情'}
                   </button>
                 </div>
@@ -484,10 +449,7 @@ const SkillPanel = ({ onBack }) => {
             <div className="memory-modal-header">
               <h1 className="dialog-title">{editingSkill ? '编辑技能' : '新建技能'}</h1>
               <button className="memory-modal-close" aria-label="关闭对话框" onClick={handleCloseModal}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
 
@@ -585,9 +547,7 @@ const SkillPanel = ({ onBack }) => {
                         className={`skill-advanced-toggle ${showAdvanced ? 'expanded' : ''}`}
                         onClick={() => setShowAdvanced(!showAdvanced)}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
+                        <ChevronRight size={12} strokeWidth={2} />
                         高级选项
                       </button>
                       {showAdvanced && (

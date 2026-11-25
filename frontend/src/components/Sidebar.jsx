@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { MessageSquare, Folder, Trash2, Check } from 'lucide-react';
 import ContentTree from './ContentTree';
 import BrandMark from './BrandMark';
 
@@ -375,9 +376,7 @@ const Sidebar = ({
                 onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelectProject(project); navigate('chat'); } }}
                 onMouseLeave={() => setConfirmDeleteProjectId(null)}
               >
-                <svg className="project-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
+                <Folder size={16} strokeWidth={2} className="project-icon" />
                 {editingProjectId === project.id ? (
                   <input
                     ref={projectInputRef}
@@ -404,16 +403,11 @@ const Sidebar = ({
                   onClick={(e) => handleDeleteProjectClick(e, project)}
                   title={confirmDeleteProjectId === project.id ? '再次点击确认删除' : '删除项目'}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    {confirmDeleteProjectId === project.id ? (
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    ) : (
-                      <>
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </>
-                    )}
-                  </svg>
+                  {confirmDeleteProjectId === project.id ? (
+                    <Check size={12} strokeWidth={2} />
+                  ) : (
+                    <Trash2 size={12} strokeWidth={2} />
+                  )}
                 </button>
               </div>
             ))}
@@ -443,9 +437,7 @@ const Sidebar = ({
                   setConfirmDeleteId(null);
                 }}
               >
-                <svg className="session-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
+                <MessageSquare size={16} strokeWidth={2} className="session-icon" />
                 {editingSessionId === session.id ? (
                   <input
                     ref={sessionInputRef}
@@ -472,16 +464,11 @@ const Sidebar = ({
                     onClick={(e) => handleDeleteClick(e, session)}
                     title={confirmDeleteId === session.id ? '再次点击确认删除' : '删除对话'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {confirmDeleteId === session.id ? (
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      ) : (
-                        <>
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </>
-                      )}
-                    </svg>
+                    {confirmDeleteId === session.id ? (
+                      <Check size={14} strokeWidth={2} />
+                    ) : (
+                      <Trash2 size={14} strokeWidth={2} />
+                    )}
                   </button>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useImperativeHandle } from 'react';
 import AttachmentPreview from './AttachmentPreview';
+import { useToast } from './ui/Toast';
 import { uploadAttachment, deleteAttachment, getThumbnailUrl } from '../api/attachments';
 import { ArrowRight, CircleHelp, FilePlus2, Globe2, Paperclip, Send, Sparkles, Wand2 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
 const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLabel, onOpenProjectKnowledgeBases, ref }) => {
+  const { push: pushToast } = useToast();
   const [inputValue, setInputValue] = useState('');
   const [mode, setMode] = useState('AUTO');
   const [webSearch, setWebSearch] = useState(true);
@@ -57,11 +59,11 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
     if (attachments.length + files.length > MAX_ATTACHMENTS) {
-      alert(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`);
+      pushToast(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`, 'warning');
       return;
     }
     if (!sessionId) {
-      alert('请先创建会话');
+      pushToast('请先创建会话', 'warning');
       return;
     }
 
@@ -71,7 +73,7 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
     for (const file of files) {
       const error = validateFile(file);
       if (error) {
-        alert(`${file.name}: ${error}`);
+        pushToast(`${file.name}: ${error}`, 'error');
         continue;
       }
 

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from './ui/ConfirmDialog';
 import * as knowledgeBasesApi from '../api/knowledgeBases';
 import * as knowledgeChunksApi from '../api/knowledgeChunks';
 import * as ragApi from '../api/rag';
 import SelectField from './SelectField';
 import PageHeading from './PageHeading';
 import EmptyState from './EmptyState';
-import { Upload } from 'lucide-react';
+import { Upload, Trash2 } from 'lucide-react';
 
 const STRATEGY_MAP = {
   recursive: '递归分块',
@@ -14,6 +15,7 @@ const STRATEGY_MAP = {
 };
 
 const KnowledgeBaseDetail = ({ kbId, onBack }) => {
+  const confirm = useConfirm();
   const [knowledgeBase, setKnowledgeBase] = useState(null);
   const [chunks, setChunks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
   };
 
   const handleDeleteChunk = async (chunkId) => {
-    if (!window.confirm('确定要删除这个知识片段吗？')) return;
+    if (!await confirm('确定要删除这个知识片段吗？')) return;
     try {
       await knowledgeChunksApi.deleteChunk(chunkId);
       fetchChunks();
@@ -108,7 +110,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm(`确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`)) return;
+    if (!await confirm(`确定要清空"${knowledgeBase?.name}"的所有知识片段吗？此操作不可恢复。`)) return;
     try {
       await knowledgeChunksApi.deleteChunksByKnowledgeBase(kbId);
       fetchChunks();
@@ -129,29 +131,14 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
             id="kb-upload-input"
             type="file"
             onChange={handleFileChange}
-            style={{ display: 'none' }}
+            className="visually-hidden-file"
             accept=".txt,.md,.pdf,.doc,.docx"
           />
           <label
             htmlFor="kb-upload-input"
-            style={{
-              padding: '8px 16px',
-              border: '1px dashed var(--border-color)',
-              borderRadius: 'var(--radius-sm)',
-              cursor: 'pointer',
-              fontSize: 13,
-              color: 'var(--text-secondary)',
-              background: 'var(--bg-primary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            className="kb-upload-label"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+            <Upload size={16} strokeWidth={2} />
             {selectedFile ? selectedFile.name : '选择文件'}
           </label>
 
@@ -159,23 +146,18 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
             options={Object.entries(STRATEGY_MAP).map(([value, label]) => ({ value, label }))} />
 
           <button
-            className="memory-new-btn"
+            className="memory-new-btn no-margin"
             onClick={handleUpload}
             disabled={uploading || !selectedFile}
-            style={{ margin: 0 }}
           >
             {uploading ? (
               <>
-                <div className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></div>
+                <div className="loading-spinner kb-spinner-sm"></div>
                 上传中...
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
+                <Upload size={16} strokeWidth={2} />
                 上传文档
               </>
             )}
@@ -183,10 +165,10 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
         </div>
 
         {uploadError && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#dc2626' }}>{uploadError}</div>
+          <div className="kb-upload-hint kb-upload-hint-error">{uploadError}</div>
         )}
         {uploadSuccess && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#16a34a' }}>上传成功，正在处理中...</div>
+          <div className="kb-upload-hint kb-upload-hint-success">上传成功，正在处理中...</div>
         )}
       </div>
 
@@ -229,10 +211,7 @@ const KnowledgeBaseDetail = ({ kbId, onBack }) => {
                     onClick={() => handleDeleteChunk(chunk.id)}
                     title="删除"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+                    <Trash2 size={14} strokeWidth={2} />
                   </button>
                 </div>
               </div>

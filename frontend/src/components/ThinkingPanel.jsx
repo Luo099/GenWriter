@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import ChainNodeItem from './ChainNodeItem';
 
 const KIND_LABELS = {
@@ -248,7 +249,7 @@ const TraceNodeItem = ({ node, depth = 0 }) => {
           disabled={!hasChildren && !hasDetails}
           title={expanded ? '收起' : '展开'}
         >
-          {(hasChildren || hasDetails) ? (expanded ? '▾' : '▸') : ''}
+          {(hasChildren || hasDetails) ? (expanded ? <ChevronDown size={12} strokeWidth={2} /> : <ChevronRight size={12} strokeWidth={2} />) : ''}
         </button>
         <span
           className={`trace-node-status-indicator trace-node-status-${status.toLowerCase()}`}
@@ -417,7 +418,7 @@ const ThinkingPanel = ({ traceEvents = [], chainNodes = [], isStreaming }) => {
     <div className={`thinking-panel trace-panel ${isCollapsed ? 'thinking-panel-collapsed' : ''}`}>
       <div className="thinking-panel-header" onClick={() => setIsCollapsed(!isCollapsed)}>
         <div className="thinking-panel-header-left">
-          <span className="thinking-panel-arrow">{isCollapsed ? '▶' : '▼'}</span>
+          <span className="thinking-panel-arrow">{isCollapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}</span>
           <span className="thinking-panel-title">执行轨迹</span>
           {isCollapsed && (
             <span className="thinking-panel-collapsed-summary">{latestStatusText}</span>

@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { Diamond, Circle, Box, Play, Check, X, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
 const NODE_TYPE_CONFIG = {
-  PLANNING:  { icon: '◈', color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: '规划' },
-  THINKING:  { icon: '◉', color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: '思考' },
-  TOOL_CALL: { icon: '⟐', color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: '工具' },
-  EXECUTION: { icon: '▶', color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', label: '执行' },
-  RESULT:    { icon: '✓', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', label: '结果' },
-  ERROR:     { icon: '✗', color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: '错误' },
+  PLANNING:  { icon: Diamond, label: '规划', typeClass: 'node-type-planning' },
+  THINKING:  { icon: Circle, label: '思考', typeClass: 'node-type-thinking' },
+  TOOL_CALL: { icon: Box, label: '工具', typeClass: 'node-type-tool_call' },
+  EXECUTION: { icon: Play, label: '执行', typeClass: 'node-type-execution' },
+  RESULT:    { icon: Check, label: '结果', typeClass: 'node-type-result' },
+  ERROR:     { icon: X, label: '错误', typeClass: 'node-type-error' },
 };
 
 const STATUS_CONFIG = {
@@ -139,41 +140,23 @@ const ChainNodeItem = ({ node, isLast }) => {
   const isRunning = node.status === 'STARTED' || node.status === 'RUNNING';
   const outputSummary = getOutputSummary(node);
 
-  const dotStyle = {
-    borderColor: node.status === 'ERROR' ? '#ef4444' : typeConfig.color,
-    backgroundColor: typeConfig.bg,
-    boxShadow: node.status === 'RUNNING' || node.status === 'STARTED'
-      ? `0 0 0 3px ${typeConfig.bg}`
-      : 'none',
-  };
-
   return (
-    <div className={`chain-node-item ${isRunning ? 'chain-node-running' : ''}`}>
+    <div className={`chain-node-item ${typeConfig.typeClass} ${isRunning ? 'chain-node-running' : ''}`}>
       <div className="chain-node-timeline">
         <div
           className={`chain-node-dot ${statusConfig.dotClass}`}
-          style={dotStyle}
         >
           {node.status === 'COMPLETED' ? (
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 6.5L4.5 8.5L9.5 3.5" stroke={typeConfig.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Check size={10} strokeWidth={1.8} />
           ) : node.status === 'ERROR' ? (
-            <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-              <path d="M2 2L8 8M8 2L2 8" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <X size={8} strokeWidth={1.5} />
           ) : (
-            <span style={{ color: typeConfig.color, fontSize: '9px' }}>{typeConfig.icon}</span>
+            <typeConfig.icon size={9} strokeWidth={2} />
           )}
         </div>
         {!isLast && (
           <div
-            className="chain-node-line"
-            style={{
-              background: node.status === 'COMPLETED'
-                ? `linear-gradient(to bottom, ${typeConfig.color}40, var(--border-color))`
-                : undefined
-            }}
+            className={`chain-node-line ${node.status === 'COMPLETED' ? 'chain-node-line-completed' : ''}`}
           />
         )}
       </div>
@@ -183,35 +166,29 @@ const ChainNodeItem = ({ node, isLast }) => {
             <span className="chain-node-name">{node.nodeName}</span>
             <span
               className="chain-node-type-badge"
-              style={{
-                color: typeConfig.color,
-                backgroundColor: typeConfig.bg,
-                borderColor: typeConfig.border,
-              }}
             >
               {typeConfig.label}
             </span>
             {isRunning && (
               <span className="chain-node-running-indicator">
-                <span className="chain-pulse" style={{ backgroundColor: typeConfig.color }} />
+                <span className="chain-pulse" />
               </span>
             )}
           </div>
           <div className="chain-node-meta">
             {node.duration != null && node.duration > 0 && (
               <span className="chain-node-duration">
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ marginRight: '2px', opacity: 0.4 }}>
-                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1"/>
-                  <path d="M6 3V6L8 7.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                </svg>
+                <Clock size={10} strokeWidth={1} style={{ marginRight: '2px', opacity: 0.4 }} />
                 {formatDuration(node.duration)}
               </span>
             )}
             {hasDetails && (
               <span className={`chain-node-expand-icon ${expanded ? 'expanded' : ''}`}>
-                <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                  <path d={expanded ? 'M2 7L5 4L8 7' : 'M2 3.5L5 6.5L8 3.5'} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                {expanded ? (
+                  <ChevronUp size={8} strokeWidth={1.2} />
+                ) : (
+                  <ChevronDown size={8} strokeWidth={1.2} />
+                )}
               </span>
             )}
           </div>

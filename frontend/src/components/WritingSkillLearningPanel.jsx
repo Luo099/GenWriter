@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Globe, Folder, PieChart, Check, AlertCircle } from 'lucide-react';
 import PageHeading from './PageHeading';
 import * as writingSkillsApi from '../api/writingSkills';
 
@@ -83,11 +84,7 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
                 aria-pressed={scope === 'GLOBAL'} className={`learning-scope-btn ${scope === 'GLOBAL' ? 'active' : ''}`}
                 onClick={() => setScope('GLOBAL')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="2" y1="12" x2="22" y2="12"></line>
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                </svg>
+                <Globe size={16} strokeWidth={2} />
                 全局可用
               </button>
               <button
@@ -95,9 +92,7 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
                 onClick={() => setScope('PROJECT')}
                 disabled={!projectId}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
+                <Folder size={16} strokeWidth={2} />
                 仅限当前项目
                 {!projectId && <span className="learning-scope-hint">（需先选择项目）</span>}
               </button>
@@ -116,11 +111,7 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
               </>
             ) : (
               <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-                  <path d="M12 2a10 10 0 0 1 10 10"></path>
-                  <path d="M20.2 7.2A10 10 0 0 0 12 2v10"></path>
-                </svg>
+                <PieChart size={18} strokeWidth={2} />
                 开始学习
               </>
             )}
@@ -132,15 +123,9 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
             <div className="learning-result-header">
               <div className="learning-result-icon">
                 {result.success ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
+                  <Check size={20} strokeWidth={2.5} />
                 ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
+                  <AlertCircle size={20} strokeWidth={2.5} />
                 )}
               </div>
               <div className="learning-result-title">{result.message}</div>

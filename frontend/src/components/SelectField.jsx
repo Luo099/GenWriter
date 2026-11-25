@@ -19,6 +19,8 @@ export default function SelectField({
   onChange,
   disabled = false,
   className = '',
+  menuWidth = 320,
+  tabIndex,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledby,
 }) {
@@ -31,6 +33,7 @@ export default function SelectField({
   const [position, setPosition] = useState(null);
   const selectedIndex = options.findIndex((option) => String(option.value) === String(value));
   const selected = selectedIndex >= 0 ? options[selectedIndex] : null;
+  const menuVisible = open && position !== null;
 
   useLayoutEffect(() => {
     if (!open) return undefined;
@@ -42,17 +45,17 @@ export default function SelectField({
       const spaceAbove = rect.top - 12;
       const dropUp = spaceBelow < Math.min(menuHeight, 260) && spaceAbove > spaceBelow;
       const maxHeight = Math.max(100, Math.min(280, dropUp ? spaceAbove : spaceBelow));
-      const width = Math.max(rect.width, Math.min(320, window.innerWidth - 24));
-      return {
+      const width = Math.min(Math.max(rect.width, menuWidth), window.innerWidth - 24);
+      setPosition({
         left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
         top: dropUp ? Math.max(12, rect.top - Math.min(menuHeight, maxHeight) - 6) : rect.bottom + 6,
         width,
         maxHeight,
         dropUp,
-      };
+      });
     };
-    setPosition(updatePosition());
-    const frame = window.requestAnimationFrame(() => setPosition(updatePosition()));
+    updatePosition();
+    const frame = window.requestAnimationFrame(updatePosition);
     const handlePointer = (event) => {
       if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
     };
@@ -61,29 +64,29 @@ export default function SelectField({
     };
     document.addEventListener('pointerdown', handlePointer, true);
     document.addEventListener('focusin', handleFocus);
-    const handleReposition = () => setPosition(updatePosition());
-    window.addEventListener('resize', handleReposition);
-    window.addEventListener('scroll', handleReposition, true);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', handlePointer, true);
       document.removeEventListener('focusin', handleFocus);
-      window.removeEventListener('resize', handleReposition);
-      window.removeEventListener('scroll', handleReposition, true);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [open]);
+  }, [open, menuWidth]);
 
   useEffect(() => {
-    if (!open) return;
-    menuRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
-  }, [open, activeIndex]);
+    if (!menuVisible) return;
+    document.getElementById(`${listId}-${activeIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [menuVisible, activeIndex, listId]);
 
   if (!options.length) return null;
 
   const openMenu = (direction = 0) => {
     if (disabled) return;
-    const start = direction === 0 ? selectedIndex : direction > 0 ? -1 : options.length;
-    setActiveIndex(findNextEnabled(options, start, direction || 1));
+    const start = direction < 0 ? options.length : -1;
+    setActiveIndex(direction === 0 && selectedIndex >= 0 && !selected?.disabled
+      ? selectedIndex : findNextEnabled(options, start, direction || 1));
     setOpen(true);
   };
   const moveActive = (index) => {
@@ -100,7 +103,7 @@ export default function SelectField({
     if (disabled) return;
     if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
       event.preventDefault();
-      if (!open) openMenu(event.key === 'ArrowUp' ? -1 : 1);
+      if (!open) openMenu(event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0);
       else if (event.key === 'ArrowDown') moveActive(findNextEnabled(options, activeIndex, 1));
       else if (event.key === 'ArrowUp') moveActive(findNextEnabled(options, activeIndex, -1));
       else choose(activeIndex);
@@ -123,20 +126,23 @@ export default function SelectField({
         role="combobox"
         className="select-field-trigger"
         disabled={disabled}
+        tabIndex={tabIndex}
         aria-label={ariaLabel}
+        title={ariaLabel}
         aria-labelledby={ariaLabelledby}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-activedescendant={open && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
         onClick={() => open ? setOpen(false) : openMenu()}
         onKeyDown={handleTriggerKey}
       >
         <span className={selected ? 'select-field-value' : 'select-field-value is-placeholder'}>{selected?.label || '请选择'}</span>
         <ChevronDown size={15} aria-hidden="true" />
       </button>
-      {open && position && createPortal(
+      {menuVisible && createPortal(
         <div ref={menuRef} className={`select-field-menu${position.dropUp ? ' drop-up' : ''}`} style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}>
-          <ul id={listId} role="listbox" aria-label={ariaLabel} aria-labelledby={ariaLabelledby} aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}>
+          <ul id={listId} role="listbox" aria-label={ariaLabel} aria-labelledby={ariaLabelledby}>
             {options.map((option, index) => (
               <li
                 id={`${listId}-${index}`}

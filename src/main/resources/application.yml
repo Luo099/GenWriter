@@ -116,6 +116,7 @@ app:
       - technical
     default-format: markdown
     max-context-messages: 20
+    default-ghostwrite-apply-mode: DIRECT_SNAPSHOT
   knowledge:
     default-search-limit: 5
     similarity-threshold: 0.7
@@ -222,6 +223,9 @@ genwriter:
     react:
       enabled: true
       max-consecutive-failures: 3
+    agent:
+      max-tool-rounds: 24
+      max-read-lines-per-call: 120
     chapter-context:
       enabled: true
       max-summaries: 2

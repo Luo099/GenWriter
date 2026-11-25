@@ -18,7 +18,7 @@ const readPreferences = (id) => {
     };
   } catch { return defaults(); }
 };
-const initialState = (id) => ({ ...readPreferences(id), projectId: id, nodes: [], rootId: '', activeNodeId: '', candidates: [],
+const initialState = (id) => ({ ...readPreferences(id), projectId: id, nodes: [], rootId: '', activeNodeId: '', candidates: [], changeSets: [],
   drafts: {}, versions: {}, selectedVersions: {}, expanded: {}, loading: false, error: '', busy: false, revision: 0 });
 
 /** Project, node and conversation selections are independent; layout never owns a draft. */
@@ -51,11 +51,15 @@ export default function useWorkspace(projectId, refreshToken) {
   const refresh = useCallback(async () => {
     if (!projectId) return;
     try {
-      const [work, candidates] = await Promise.all([api.getWorkspace(projectId), api.getCandidates(projectId)]);
+      const [work, candidates, changeSets] = await Promise.all([
+        api.getWorkspace(projectId),
+        api.getCandidates(projectId),
+        api.getChangeSets(projectId).catch(() => []),
+      ]);
       patch((current) => {
         const activeIds = new Set(work.nodes.map((node) => node.id));
         const retain = (entries) => Object.fromEntries(Object.entries(entries).filter(([id]) => activeIds.has(id)));
-        return { ...work, candidates, loading: false, error: '', revision: current.revision + 1,
+        return { ...work, candidates, changeSets: changeSets || [], loading: false, error: '', revision: current.revision + 1,
           drafts: retain(current.drafts), versions: retain(current.versions), selectedVersions: retain(current.selectedVersions),
           activeNodeId: activeIds.has(current.activeNodeId) ? current.activeNodeId : work.rootId };
       });
@@ -138,6 +142,22 @@ export default function useWorkspace(projectId, refreshToken) {
     return target;
   }, [projectId, save, patch]);
 
+  const prepareUnifiedTarget = useCallback(async (mode, sourceSessionId, requestedNodeId) => {
+    const captured = statesRef.current[projectId];
+    const nodeId = requestedNodeId || captured?.activeNodeId || captured?.rootId;
+    const node = captured?.nodes.find((entry) => entry.id === nodeId);
+    if (!node) throw new Error('请先选择正文节点');
+    const draft = captured?.drafts[nodeId];
+    if (mode === 'GHOSTWRITE' && draft?.dirty) {
+      await save(nodeId, sourceSessionId);
+      return { activeNodeId: nodeId, activeUnsavedPreview: '' };
+    }
+    return {
+      activeNodeId: nodeId,
+      activeUnsavedPreview: draft?.dirty ? (draft.content || '') : '',
+    };
+  }, [projectId, save]);
+
   const adopt = useCallback(async (candidate) => {
     if (statesRef.current[projectId]?.drafts[candidate.targetNodeId]?.dirty) throw new Error('目标正文有未保存修改，请先保存，再基于最新正文重新生成候选');
     const result = await api.adoptCandidate(projectId, candidate.id);
@@ -145,6 +165,29 @@ export default function useWorkspace(projectId, refreshToken) {
     await refresh();
     return result;
   }, [projectId, applySnapshot, refresh]);
+
+  const adoptChangeSet = useCallback(async (changeSet) => {
+    const items = changeSet?.items || [];
+    const dirtyItem = items.find((item) => item.action !== 'CREATE_NODE' && item.targetNodeId && statesRef.current[projectId]?.drafts[item.targetNodeId]?.dirty);
+    if (dirtyItem) {
+      throw new Error('变更涉及的章节存在未保存修改，请先保存编辑器草稿后再采纳');
+    }
+    const result = await api.adoptChangeSet(projectId, changeSet.id);
+    await refresh();
+    return result;
+  }, [projectId, refresh]);
+
+  const discardChangeSet = useCallback(async (changeSet) => {
+    const result = await api.discardChangeSet(projectId, changeSet.id);
+    await refresh();
+    return result;
+  }, [projectId, refresh]);
+
+  const rollbackChangeSet = useCallback(async (changeSet) => {
+    const result = await api.rollbackChangeSet(projectId, changeSet.id);
+    await refresh();
+    return result;
+  }, [projectId, refresh]);
 
   const mutate = useCallback(async (action) => {
     patch({ busy: true, error: '' });
@@ -161,5 +204,23 @@ export default function useWorkspace(projectId, refreshToken) {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, []);
 
-  return { ...state, activeNode, patch, preferences, refresh, selectNode, loadVersions, updateDraft, applySnapshot, save, prepareTarget, adopt, mutate };
+  return {
+    ...state,
+    activeNode,
+    patch,
+    preferences,
+    refresh,
+    selectNode,
+    loadVersions,
+    updateDraft,
+    applySnapshot,
+    save,
+    prepareTarget,
+    prepareUnifiedTarget,
+    adopt,
+    adoptChangeSet,
+    discardChangeSet,
+    rollbackChangeSet,
+    mutate,
+  };
 }

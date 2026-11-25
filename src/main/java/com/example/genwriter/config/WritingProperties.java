@@ -1,5 +1,6 @@
 package com.example.genwriter.config;
 
+import com.example.genwriter.model.enums.GhostwriteApplyMode;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -19,4 +20,6 @@ public class WritingProperties {
     private String defaultFormat = "markdown";
 
     private int maxContextMessages = 20;
+
+    private GhostwriteApplyMode defaultGhostwriteApplyMode = GhostwriteApplyMode.DIRECT_SNAPSHOT;
 }

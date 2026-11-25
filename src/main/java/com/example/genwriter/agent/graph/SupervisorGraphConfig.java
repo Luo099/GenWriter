@@ -52,6 +52,13 @@ public class SupervisorGraphConfig {
                 .addStrategy("reviewCount", KeyStrategy.REPLACE)
                 .addStrategy("learningReport", KeyStrategy.REPLACE)
                 .addStrategy("storedCount", KeyStrategy.REPLACE)
+                .addStrategy("assistantMode", KeyStrategy.REPLACE)
+                .addStrategy("activeNodeId", KeyStrategy.REPLACE)
+                .addStrategy("activeUnsavedPreview", KeyStrategy.REPLACE)
+                .addStrategy("workspaceRunId", KeyStrategy.REPLACE)
+                .addStrategy("workspaceChangeSet", KeyStrategy.REPLACE)
+                .addStrategy("ghostwriteApplyMode", KeyStrategy.REPLACE)
+                .addStrategy("workspaceTouchedNodeIds", KeyStrategy.REPLACE)
                 .build();
     }
 

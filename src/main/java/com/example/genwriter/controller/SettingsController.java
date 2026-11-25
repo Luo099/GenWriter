@@ -27,12 +27,14 @@ public class SettingsController {
     public ApiResponse<WritingOutputSettings> updateWritingOutputSettings(
             @RequestBody UpdateWritingOutputSettingsRequest request) {
         if (request == null || (request.getMarkdownEnabled() == null
-                && request.getParallelChapterWritingEnabled() == null)) {
+                && request.getParallelChapterWritingEnabled() == null
+                && request.getGhostwriteApplyMode() == null)) {
             return ApiResponse.error("400", "至少提供一个可更新字段");
         }
         return ApiResponse.success(
                 writingOutputSettingsService.updateSettings(
                         request.getMarkdownEnabled(),
-                        request.getParallelChapterWritingEnabled()));
+                        request.getParallelChapterWritingEnabled(),
+                        request.getGhostwriteApplyMode()));
     }
 }

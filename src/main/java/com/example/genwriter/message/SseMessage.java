@@ -113,6 +113,16 @@ public class SseMessage {
         ATTACHMENT_PROCESSING,
 
         /**
+         * 工作区直接写入快照或调整目录后通知前端实时刷新。
+         */
+        WORKSPACE_UPDATED,
+
+        /**
+         * 工作区待确认变更集（候选）生成或状态变更通知。
+         */
+        WORKSPACE_CHANGESET_UPDATED,
+
+        /**
          * 错误信息
          */
         ERROR,

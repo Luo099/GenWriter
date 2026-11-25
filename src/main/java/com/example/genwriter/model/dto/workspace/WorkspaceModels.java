@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class WorkspaceModels {
     private WorkspaceModels() {}
@@ -31,4 +32,14 @@ public final class WorkspaceModels {
     public record Adoption(ContentNode node, DocumentDTO document, Candidate candidate) {}
     public record SnapshotSaved(String projectId, String nodeId, String documentId, String sessionId,
                                 String title, String content, String instruction) {}
+
+    public record ChangeItem(String id, String changeSetId, int seq, String action,
+                             String targetNodeId, String parentNodeId, String afterNodeId, Integer position,
+                             String baseDocumentId, String afterDocumentId, String title, String beforeTitle,
+                             String content, String diffPreview, Map<String, Object> stats,
+                             Map<String, Object> beforeTreeState, String status, OffsetDateTime createdAt) {}
+
+    public record ChangeSet(String id, String projectId, String sessionId, String sourceSessionId,
+                            String runId, String applyMode, String status, String summary,
+                            List<ChangeItem> items, OffsetDateTime createdAt, OffsetDateTime resolvedAt) {}
 }

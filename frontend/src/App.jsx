@@ -41,6 +41,10 @@ const saveChainToStorage = (
       contentActivityText: contentState.contentActivityText || '',
       isDraftStreaming: !!contentState.isDraftStreaming,
       isFinalContent: !!contentState.isFinalContent,
+      assistantMode: contentState.assistantMode || '',
+      ghostwriteApplyMode: contentState.ghostwriteApplyMode || '',
+      workspaceRunId: contentState.workspaceRunId || '',
+      workspaceChangeSet: contentState.workspaceChangeSet || null,
       timestamp: Date.now(),
     };
     sessionStorage.setItem(chainStorageKey(sessionId), JSON.stringify(data));
@@ -103,6 +107,10 @@ const normalizeGeneratedContentEvent = (data) => {
     updatedAt: data.updatedAt || Date.now(),
     document: data.document,
     candidate: data.candidate,
+    changeSet: data.changeSet || null,
+    assistantMode: data.assistantMode || '',
+    ghostwriteApplyMode: data.ghostwriteApplyMode || '',
+    workspaceRunId: data.workspaceRunId || '',
     sources: Array.isArray(data.sources) ? data.sources : null,
   };
 };
@@ -268,6 +276,10 @@ function App() {
                 if (meta.traceEvents) msg.traceEvents = meta.traceEvents;
                 if (meta.thinkingSteps) msg.thinkingSteps = meta.thinkingSteps;
                 if (meta.sources) msg.sources = meta.sources;
+                if (meta.assistantMode) msg.assistantMode = meta.assistantMode;
+                if (meta.ghostwriteApplyMode) msg.ghostwriteApplyMode = meta.ghostwriteApplyMode;
+                if (meta.workspaceRunId) msg.workspaceRunId = meta.workspaceRunId;
+                if (meta.workspaceChangeSet) msg.workspaceChangeSet = meta.workspaceChangeSet;
               } catch {
                 // ignore parse error
               }
@@ -300,6 +312,10 @@ function App() {
                 contentActivityText: cached.contentActivityText || mapped[lastAssistantIdx].contentActivityText || '',
                 isDraftStreaming: !!cached.isDraftStreaming,
                 isFinalContent: !!cached.isFinalContent,
+                assistantMode: cached.assistantMode || mapped[lastAssistantIdx].assistantMode || '',
+                ghostwriteApplyMode: cached.ghostwriteApplyMode || mapped[lastAssistantIdx].ghostwriteApplyMode || '',
+                workspaceRunId: cached.workspaceRunId || mapped[lastAssistantIdx].workspaceRunId || '',
+                workspaceChangeSet: cached.workspaceChangeSet || mapped[lastAssistantIdx].workspaceChangeSet || null,
               };
             }
           }
@@ -340,7 +356,8 @@ function App() {
       lastAssistant.traceEvents?.length > 0 ||
       lastAssistant.chainNodes?.length > 0 ||
       lastAssistant.thinkingSteps?.length > 0 ||
-      lastAssistant.sources?.length > 0
+      lastAssistant.sources?.length > 0 ||
+      lastAssistant.workspaceChangeSet
     )) {
       saveChainToStorage(
         activeSession.id,
@@ -356,13 +373,17 @@ function App() {
           contentActivityText: lastAssistant.contentActivityText,
           isDraftStreaming: lastAssistant.isDraftStreaming,
           isFinalContent: lastAssistant.isFinalContent,
+          assistantMode: lastAssistant.assistantMode,
+          ghostwriteApplyMode: lastAssistant.ghostwriteApplyMode,
+          workspaceRunId: lastAssistant.workspaceRunId,
+          workspaceChangeSet: lastAssistant.workspaceChangeSet,
         }
       );
     }
   }, [messages, activeSession?.id]);
 
   const handleSend = useCallback(
-    async (content, mode = 'AUTO', webSearch = true, attachmentIds = [], documentId = '', target) => {
+    async (content, mode = 'AUTO', webSearch = true, attachmentIds = [], documentId = '', target, extra) => {
       if (isLoading) return false;
       let session;
       try {
@@ -413,6 +434,10 @@ function App() {
           contentStageLabel: '',
           contentStatus: '',
           contentActivityText: '',
+          assistantMode: extra?.mode || '',
+          ghostwriteApplyMode: '',
+          workspaceRunId: '',
+          workspaceChangeSet: null,
           isDraftStreaming: false,
           isFinalContent: false,
           isStreaming: true,
@@ -440,7 +465,7 @@ function App() {
       const closeStream = connectSSE(sessionId, {
         onOpen: async () => {
           try {
-            await messagesApi.chat(sessionId, content, mode, webSearch, attachmentIds, documentId, target);
+            await messagesApi.chat(sessionId, content, mode, webSearch, attachmentIds, documentId, target, extra);
             if (failed) return;
             accepted = true;
             settleAcceptance({ accepted: true });
@@ -454,6 +479,31 @@ function App() {
 
           const ssePayload = payload.payload || {};
           const { data, statusText: st, done } = ssePayload;
+
+          if (payload.type === 'WORKSPACE_UPDATED' || payload.type === 'WORKSPACE_CHANGESET_UPDATED') {
+            if (data && typeof data === 'object') {
+              setDocumentRefresh({
+                token: Date.now(),
+                nodeId: data.nodeId,
+                changeSetId: data.changeSetId,
+                eventType: payload.type,
+              });
+              if (data.changeSet) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          workspaceChangeSet: data.changeSet,
+                          ghostwriteApplyMode: data.applyMode || m.ghostwriteApplyMode,
+                        }
+                      : m
+                  )
+                );
+              }
+            }
+            return;
+          }
 
           if (payload.type === 'ERROR') {
             const errorText = typeof data === 'string'
@@ -599,6 +649,13 @@ function App() {
                 setDocumentRefresh({ token: Date.now(), documentId: event.document.id });
               }
               if (event.candidate?.id) setDocumentRefresh({ token: Date.now(), candidateId: event.candidate.id });
+              if (event.changeSet?.id || event.workspaceRunId) {
+                setDocumentRefresh({
+                  token: Date.now(),
+                  changeSetId: event.changeSet?.id,
+                  workspaceRunId: event.workspaceRunId,
+                });
+              }
 
               if (event.mode === 'stage_start') {
                 assistantContent = '';
@@ -620,6 +677,10 @@ function App() {
                     contentActivityText: '',
                     isDraftStreaming: !event.finalContent && event.status !== 'COMPLETED',
                     isFinalContent: event.finalContent,
+                    ...(event.assistantMode ? { assistantMode: event.assistantMode } : {}),
+                    ...(event.ghostwriteApplyMode ? { ghostwriteApplyMode: event.ghostwriteApplyMode } : {}),
+                    ...(event.workspaceRunId ? { workspaceRunId: event.workspaceRunId } : {}),
+                    ...(event.changeSet ? { workspaceChangeSet: event.changeSet } : {}),
                     ...(event.sources && event.sources.length > 0
                       ? { sources: event.sources }
                       : {}),

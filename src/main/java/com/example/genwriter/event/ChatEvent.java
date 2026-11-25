@@ -58,7 +58,23 @@ public class ChatEvent {
      */
     private boolean webSearch = true;
 
+    private com.example.genwriter.model.enums.AssistantMode mode;
+
+    private String activeNodeId;
+
+    private String activeUnsavedPreview;
+
     private com.example.genwriter.model.dto.workspace.WorkspaceModels.WritingTarget target;
+
+    public ChatEvent(String sessionId,
+                     String documentId,
+                     MultimodalContent userInput,
+                     List<String> knowledgeBaseIds,
+                     WritingType type,
+                     boolean webSearch,
+                     com.example.genwriter.model.dto.workspace.WorkspaceModels.WritingTarget target) {
+        this(sessionId, documentId, userInput, knowledgeBaseIds, type, webSearch, null, null, null, target);
+    }
 
     /**
      * 写作类型枚举

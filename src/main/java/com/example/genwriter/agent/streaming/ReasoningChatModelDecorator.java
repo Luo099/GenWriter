@@ -1,6 +1,7 @@
 package com.example.genwriter.agent.streaming;
 
 import com.example.genwriter.agent.chain.ThoughtChainPublisher;
+import com.example.genwriter.agent.supervisor.SupervisorModeProperties;
 import com.example.genwriter.agent.tool.SessionContextHolder;
 import com.example.genwriter.config.DynamicChatModel;
 import com.example.genwriter.config.LLMConfig;
@@ -53,8 +54,8 @@ import java.util.Set;
 @Component
 public class ReasoningChatModelDecorator implements ChatModel {
 
-    /** 防御性工具循环上限：超过则返回已积累内容，避免无限循环。 */
-    private static final int MAX_TOOL_ROUNDS = 8;
+    /** 防御性工具循环上限默认值（当未配置 SupervisorModeProperties 时使用）。 */
+    private static final int DEFAULT_MAX_TOOL_ROUNDS = 8;
 
     private final DynamicChatModel delegate;
     private final ReasoningStreamHelper reasoningStreamHelper;
@@ -62,6 +63,7 @@ public class ReasoningChatModelDecorator implements ChatModel {
     private final ThoughtChainPublisher chainPublisher;
     private final ObjectProvider<FunctionCallback> registeredTools;
     private final ObjectMapper objectMapper;
+    private final SupervisorModeProperties supervisorModeProperties;
 
     public ReasoningChatModelDecorator(DynamicChatModel delegate,
                                        ReasoningStreamHelper reasoningStreamHelper,
@@ -69,12 +71,36 @@ public class ReasoningChatModelDecorator implements ChatModel {
                                        ThoughtChainPublisher chainPublisher,
                                        ObjectProvider<FunctionCallback> registeredTools,
                                        ObjectMapper objectMapper) {
+        this(delegate, reasoningStreamHelper, streamingClient, chainPublisher, registeredTools, objectMapper,
+                new SupervisorModeProperties());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ReasoningChatModelDecorator(DynamicChatModel delegate,
+                                       ReasoningStreamHelper reasoningStreamHelper,
+                                       ReasoningStreamingClient streamingClient,
+                                       ThoughtChainPublisher chainPublisher,
+                                       ObjectProvider<FunctionCallback> registeredTools,
+                                       ObjectMapper objectMapper,
+                                       SupervisorModeProperties supervisorModeProperties) {
         this.delegate = delegate;
         this.reasoningStreamHelper = reasoningStreamHelper;
         this.streamingClient = streamingClient;
         this.chainPublisher = chainPublisher;
         this.registeredTools = registeredTools;
         this.objectMapper = objectMapper;
+        this.supervisorModeProperties = supervisorModeProperties != null
+                ? supervisorModeProperties
+                : new SupervisorModeProperties();
+    }
+
+    private int maxToolRounds() {
+        if (supervisorModeProperties != null
+                && supervisorModeProperties.getAgent() != null
+                && supervisorModeProperties.getAgent().getMaxToolRounds() > 0) {
+            return supervisorModeProperties.getAgent().getMaxToolRounds();
+        }
+        return DEFAULT_MAX_TOOL_ROUNDS;
     }
 
     /** {@link #callWithReasoning(Prompt)} 的返回：content 正文 + reasoning 全文。 */
@@ -120,7 +146,8 @@ public class ReasoningChatModelDecorator implements ChatModel {
         StringBuilder reasoningAll = new StringBuilder();
         StringBuilder contentAll = new StringBuilder();
 
-        for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        int rounds = maxToolRounds();
+        for (int round = 0; round < rounds; round++) {
             ReasoningStreamingClient.RoundResult result = streamingClient.streamRound(
                     session.baseUrl(), session.apiCompatibility(), session.apiKey(), session.model(),
                     toOpenAiMessages(messages), session.temperature(), session.enableThinking(),
@@ -132,8 +159,8 @@ public class ReasoningChatModelDecorator implements ChatModel {
                 break;
             }
             appendToolRound(messages, result, session.toolCallbacks(), session.toolContext());
-            if (round == MAX_TOOL_ROUNDS - 1) {
-                log.warn("[ReasoningChatModelDecorator] tool loop reached max rounds ({})", MAX_TOOL_ROUNDS);
+            if (round == rounds - 1) {
+                log.warn("[ReasoningChatModelDecorator] tool loop reached max rounds ({})", rounds);
             }
         }
         return new ReasoningCallResult(contentAll.toString(), reasoningAll.toString());
@@ -146,7 +173,8 @@ public class ReasoningChatModelDecorator implements ChatModel {
         List<Message> messages = new ArrayList<>(prompt.getInstructions());
         StringBuilder reasoningAll = new StringBuilder();
 
-        for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        int rounds = maxToolRounds();
+        for (int round = 0; round < rounds; round++) {
             ReasoningStreamingClient.RoundResult result = streamingClient.streamRound(
                     session.baseUrl(), session.apiCompatibility(), session.apiKey(), session.model(),
                     toOpenAiMessages(messages), session.temperature(), session.enableThinking(),

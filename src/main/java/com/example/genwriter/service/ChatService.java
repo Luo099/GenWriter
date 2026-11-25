@@ -22,7 +22,17 @@ public class ChatService {
     public void submitChatTask(String sessionId, String documentId, MultimodalContent userInput,
                                ChatEvent.WritingType type, boolean webSearch, List<String> knowledgeBaseIds,
                                WritingTarget target) {
+        submitChatTask(sessionId, documentId, userInput, type, webSearch, knowledgeBaseIds, target,
+                null, null, null);
+    }
+
+    public void submitChatTask(String sessionId, String documentId, MultimodalContent userInput,
+                               ChatEvent.WritingType type, boolean webSearch, List<String> knowledgeBaseIds,
+                               WritingTarget target,
+                               com.example.genwriter.model.enums.AssistantMode mode,
+                               String activeNodeId,
+                               String activeUnsavedPreview) {
         publisher.publishEvent(new ChatEvent(sessionId, documentId, userInput, List.copyOf(knowledgeBaseIds),
-                type, webSearch, target));
+                type, webSearch, mode, activeNodeId, activeUnsavedPreview, target));
     }
 }

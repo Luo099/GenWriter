@@ -66,10 +66,15 @@ public class ContentStreamPublisher {
     }
 
     public void publishFinal(String sessionId, String content, Object document, Object sources, String resourceId) {
-        publishFinal(sessionId, content, document, sources, resourceId, null);
+        publishFinal(sessionId, content, document, sources, resourceId, null, null);
     }
 
     public void publishFinal(String sessionId, String content, Object document, Object sources, String resourceId, Object candidate) {
+        publishFinal(sessionId, content, document, sources, resourceId, candidate, null);
+    }
+
+    public void publishFinal(String sessionId, String content, Object document, Object sources, String resourceId,
+                             Object candidate, Map<String, Object> extraFields) {
         if (sessionId == null || sessionId.isBlank() || content == null || content.isBlank()) {
             return;
         }
@@ -82,7 +87,12 @@ public class ContentStreamPublisher {
         if (sources != null) {
             data.put("sources", sources);
         }
-        if (candidate != null) data.put("candidate", candidate);
+        if (candidate != null) {
+            data.put("candidate", candidate);
+        }
+        if (extraFields != null && !extraFields.isEmpty()) {
+            data.putAll(extraFields);
+        }
 
         SseMessage.Metadata metadata = resourceId != null && !resourceId.isBlank()
                 ? SseMessage.Metadata.builder().resourceId(resourceId).build()

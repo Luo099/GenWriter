@@ -11,6 +11,10 @@ export const saveSnapshot = (projectId, nodeId, data) => client.post(`${base(pro
 export const getCandidates = (projectId) => client.get(`${base(projectId)}/candidates`);
 export const proposeSnapshot = (projectId, data) => client.post(`${base(projectId)}/candidates`, data);
 export const adoptCandidate = (projectId, candidateId) => client.post(`${base(projectId)}/candidates/${candidateId}/adopt`);
+export const getChangeSets = (projectId) => client.get(`${base(projectId)}/changesets`);
+export const adoptChangeSet = (projectId, changeSetId) => client.post(`${base(projectId)}/changesets/${changeSetId}/adopt`);
+export const discardChangeSet = (projectId, changeSetId) => client.post(`${base(projectId)}/changesets/${changeSetId}/discard`);
+export const rollbackChangeSet = (projectId, changeSetId) => client.post(`${base(projectId)}/changesets/${changeSetId}/rollback`);
 export const getLegacy = (projectId) => client.get(`${base(projectId)}/legacy`);
 export const importLegacy = (projectId, data) => client.post(`${base(projectId)}/legacy/import`, data);
 export const getReading = (projectId) => client.get(`${base(projectId)}/reading`);

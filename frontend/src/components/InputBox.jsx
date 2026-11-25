@@ -1,15 +1,15 @@
-import { useState, useRef, useEffect, useCallback, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import AttachmentPreview from './AttachmentPreview';
-import { useToast } from './ui/Toast';
+import SelectField from './SelectField';
 import { uploadAttachment, deleteAttachment, getThumbnailUrl } from '../api/attachments';
-import { ArrowRight, CircleHelp, FilePlus2, Globe2, Paperclip, Send, Sparkles, Wand2 } from 'lucide-react';
+import { ArrowUp, Globe2, Paperclip } from 'lucide-react';
 
 const MODES = [
-  { value: 'AUTO', label: '自动识别', icon: Sparkles },
-  { value: 'CREATE', label: '新建文档', icon: FilePlus2 },
-  { value: 'CONTINUE', label: '续写', icon: ArrowRight },
-  { value: 'POLISH', label: '润色优化', icon: Wand2 },
-  { value: 'KNOWLEDGE_QA', label: '知识问答', icon: CircleHelp },
+  { value: 'AUTO', label: '自动' },
+  { value: 'CREATE', label: '创作' },
+  { value: 'CONTINUE', label: '续写' },
+  { value: 'POLISH', label: '润色' },
+  { value: 'KNOWLEDGE_QA', label: '知识问答' },
 ];
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -18,8 +18,7 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_DOC_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 
-const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLabel, onOpenProjectKnowledgeBases, ref }) => {
-  const { push: pushToast } = useToast();
+const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
   const [inputValue, setInputValue] = useState('');
   const [mode, setMode] = useState('AUTO');
   const [webSearch, setWebSearch] = useState(true);
@@ -29,8 +28,6 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const submitting = useRef(false);
-
-  useImperativeHandle(ref, () => ({ insertPrompt(text) { setInputValue(text); textareaRef.current?.focus(); } }), []);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -59,21 +56,19 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
     if (attachments.length + files.length > MAX_ATTACHMENTS) {
-      pushToast(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`, 'warning');
+      alert(`单次消息最多携带 ${MAX_ATTACHMENTS} 个附件`);
       return;
     }
     if (!sessionId) {
-      pushToast('请先创建会话', 'warning');
+      alert('请先创建会话');
       return;
     }
 
     setIsUploading(true);
-    const newAttachments = [];
-
     for (const file of files) {
       const error = validateFile(file);
       if (error) {
-        pushToast(`${file.name}: ${error}`, 'error');
+        alert(`${file.name}: ${error}`);
         continue;
       }
 
@@ -90,7 +85,6 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
         error: null,
         rawFile: file,
       };
-      newAttachments.push(att);
       setAttachments((prev) => [...prev, att]);
 
       try {
@@ -205,6 +199,7 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
   };
 
   const handleKeyDown = (e) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -253,6 +248,10 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
   };
 
   const canSend = (inputValue.trim() || attachments.some((a) => a.id && !a.error)) && !isLoading && !disabled && !isUploading;
+  const knowledgeQa = mode === 'KNOWLEDGE_QA';
+  const targetHint = knowledgeQa
+    ? '知识问答只回复会话'
+    : target?.value !== 'DISCUSS' ? target?.hint : '';
 
   return (
     <div className="input-container">
@@ -262,15 +261,6 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <button
-          className="attachment-btn"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isUploading}
-          title="添加附件"
-          type="button"
-        >
-          <Paperclip size={17} />
-        </button>
         <input
           ref={fileInputRef}
           type="file"
@@ -282,7 +272,9 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
         <textarea
           ref={textareaRef}
           className="input-textarea"
-          placeholder="输入消息... (可拖拽或粘贴图片)"
+          aria-label="给助手发消息"
+          placeholder={knowledgeQa ? '输入要检索的问题…' : '给助手发消息…'}
+          title="Enter 发送，Shift + Enter 换行"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -290,52 +282,39 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', knowledgeBaseLa
           disabled={disabled || isLoading}
           rows={1}
         />
-        <button
-          aria-label="发送消息"
-          className="send-btn"
-          onClick={handleSubmit}
-          disabled={!canSend}
-        >
-          <Send size={16} />
-        </button>
-      </div>
-      <AttachmentPreview attachments={attachments} onRemove={handleRemoveAttachment} onRetry={handleRetryAttachment} />
-      <div className="mode-selector">
-        <div className="mode-pills">
-          {MODES.map((m) => (
+        <AttachmentPreview attachments={attachments} onRemove={handleRemoveAttachment} onRetry={handleRetryAttachment} />
+        {targetHint && <p className="composer-target-hint" title={targetHint} role="status">{targetHint}</p>}
+        <div className="composer-controls">
+          <div className="composer-options">
+            {target && <SelectField className="composer-target" aria-label="写入目标" menuWidth={188}
+              value={knowledgeQa ? 'DISCUSS' : target.value} options={target.options}
+              disabled={disabled || isLoading || knowledgeQa} onChange={target.onChange} />}
+            <SelectField className="composer-mode" aria-label="创作模式" menuWidth={148}
+              value={mode} options={MODES} disabled={disabled || isLoading} onChange={setMode} />
+          </div>
+          <div className="composer-actions">
             <button
-              key={m.value}
-              aria-pressed={mode === m.value}
-              className={`mode-pill${mode === m.value ? ' active' : ''}`}
-              onClick={() => setMode(m.value)}
+              aria-label="联网搜索"
+              aria-pressed={webSearch}
+              className="composer-web"
+              onClick={() => setWebSearch((current) => !current)}
+              disabled={disabled || isLoading}
               type="button"
+              title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
             >
-              <span className="mode-pill-icon"><m.icon size={13} /></span>
-              {m.label}
+              <Globe2 size={15} />
+              <span>联网</span>
             </button>
-          ))}
-        </div>
-        <div className="input-search-options">
-          <button
-            aria-pressed={webSearch}
-            className={`websearch-toggle${webSearch ? ' active' : ''}`}
-            onClick={() => setWebSearch(!webSearch)}
-            type="button"
-            title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
-          >
-            <span className="websearch-toggle-icon">
-              <Globe2 size={13} />
-            </span>
-            <span className="websearch-toggle-label">联网搜索</span>
-          </button>
-          {onOpenProjectKnowledgeBases && (
-            <button className="workspace-action project-kb-trigger" type="button" onClick={onOpenProjectKnowledgeBases}>
-              {knowledgeBaseLabel}
+            <button className="attachment-btn" type="button" aria-label="添加附件" title="添加附件"
+              disabled={disabled || isUploading || isLoading} onClick={() => fileInputRef.current?.click()}>
+              <Paperclip size={16} />
             </button>
-          )}
+            <button aria-label="发送消息" title="发送消息" className="send-btn" type="button" onClick={handleSubmit} disabled={!canSend}>
+              <ArrowUp size={17} />
+            </button>
+          </div>
         </div>
       </div>
-      <p className="input-hint">Enter 发送 · Shift + Enter 换行</p>
     </div>
   );
 };

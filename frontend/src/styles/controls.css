@@ -339,6 +339,26 @@ summary:focus-visible {
   font-size: var(--fs-xs);
 }
 
+.work-editor-breadcrumb > .workspace-save-state.is-dirty {
+  color: var(--accent-text);
+}
+
+.work-editor-heading > .work-editor-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.work-save-button {
+  min-width: 54px;
+  white-space: nowrap;
+}
+
+.version-trigger {
+  font-variant-numeric: tabular-nums;
+}
+
 .workspace-chat-header {
   min-height: 62px;
   padding: 10px 16px;
@@ -568,12 +588,9 @@ summary:focus-visible {
 
 .editor-toolbar-group {
   gap: 2px;
-  padding-right: 7px;
-  border-right-color: var(--border-subtle);
 }
 
 .editor-toolbar-button,
-.editor-format-group button,
 .editor-source-toggle {
   min-width: 29px;
   height: 29px;
@@ -584,20 +601,17 @@ summary:focus-visible {
   font-weight: var(--weight-medium);
 }
 
-.editor-format-group button:first-child {
-  padding: 0 8px;
-}
-
 .editor-toolbar-button:hover:not(:disabled),
-.editor-format-group button:hover:not(:disabled),
 .editor-source-toggle:hover:not(:disabled) {
   border-color: transparent;
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.editor-toolbar-button.active,
-.editor-format-group button.active {
+.editor-toolbar-button[aria-pressed='true'],
+.editor-toolbar-button[aria-expanded='true'],
+.editor-overflow-menu button[aria-pressed='true'],
+.work-format-toggle[aria-expanded='true'] {
   border-color: var(--border-subtle);
   background: var(--accent-soft);
   color: var(--accent-on-soft);
@@ -606,6 +620,95 @@ summary:focus-visible {
 .editor-source-toggle {
   padding: 0 6px;
   font-weight: var(--weight-regular);
+}
+
+.editor-toolbar-divider {
+  height: 17px;
+  border-left: 1px solid var(--border-strong);
+}
+
+.editor-heading-control .select-field-trigger {
+  min-height: 29px;
+  padding: 0 5px;
+  border-color: transparent;
+  background: transparent;
+  font-size: var(--fs-xs);
+}
+
+.editor-overflow {
+  position: relative;
+  margin-left: auto;
+}
+
+.editor-overflow-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 158px;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-md);
+}
+
+.editor-overflow-menu button,
+.selection-bubble-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-control);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-overflow-menu button:hover,
+.selection-bubble-actions button:hover,
+.selection-bubble-actions button[aria-expanded='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-on-soft);
+}
+
+.selection-bubble-menu {
+  z-index: 100;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-md);
+}
+
+.selection-bubble-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.selection-instruction {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 4px;
+  padding: 0 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel-sunken);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+}
+
+.editor-prose mark,
+.workspace-markdown mark {
+  background: var(--status-warning-bg);
+  color: inherit;
 }
 
 .work-editor .editor-prose {
@@ -1237,7 +1340,7 @@ summary:focus-visible {
 
 .input-wrapper {
   min-height: 54px;
-  padding: 7px 49px 7px 9px;
+  padding: 7px;
   border-color: var(--border-strong);
   border-radius: 10px;
   box-shadow: none;
@@ -1259,10 +1362,92 @@ summary:focus-visible {
 }
 
 .send-btn {
-  right: 9px;
-  bottom: 9px;
   width: 32px;
   height: 32px;
+}
+
+.input-container {
+  container-type: inline-size;
+}
+
+.composer-controls,
+.composer-options,
+.composer-actions {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 3px;
+}
+
+.composer-controls {
+  justify-content: space-between;
+}
+
+.composer-options .select-field {
+  width: auto;
+  min-width: 0;
+}
+
+.composer-options .select-field-trigger {
+  min-height: 31px;
+  gap: 3px;
+  padding: 4px 5px;
+  border-color: transparent;
+  background: transparent;
+  font-size: var(--fs-xs);
+}
+
+.composer-options .select-field-trigger > svg {
+  width: 12px;
+  height: 12px;
+}
+
+.composer-actions {
+  flex-shrink: 0;
+}
+
+.composer-web,
+.composer-actions .attachment-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 30px;
+  height: 31px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.composer-web:hover:not(:disabled),
+.composer-options .select-field-trigger:hover:not(:disabled) {
+  background: var(--bg-panel-sunken);
+}
+
+.composer-web[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-on-soft);
+}
+
+.composer-target-hint {
+  margin: 0;
+  padding: 0 5px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 290px) {
+  .composer-web > span {
+    display: none;
+  }
 }
 
 .workspace-chat-pane .mode-selector {

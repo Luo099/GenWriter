@@ -1,8 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { BookOpen, Bot, Download, LayoutPanelLeft, Plus, X, PanelRightOpen, ArrowUpRight, Feather, ListTree, Search } from 'lucide-react';
+import { BookOpen, Bot, Download, LayoutPanelLeft, Plus, X, PanelRightOpen } from 'lucide-react';
 import BrandMark from './BrandMark';
 import WorkEditor from './WorkEditor';
 import MessageBubble from './MessageBubble';
@@ -11,8 +9,12 @@ import SelectField from './SelectField';
 import { CandidateDialog, LegacyDialog, ProjectKnowledgeBasesDialog, WorkExportDialog, WorkspaceModal } from './WorkspaceDialogs';
 import { getReading } from '../api/workspace';
 import { getProjectKnowledgeBases } from '../api/projects';
+import { markdownToHtml } from '../utils/markdownEditor';
 
-const operations = [ ['DISCUSS', '自由讨论'], ['REPLACE', '修改当前节点'], ['APPEND', '续写本节'], ['CREATE_NODE', '新增章节'] ];
+const operations = [
+  { value: 'DISCUSS', label: '仅对话' }, { value: 'REPLACE', label: '替换本章' },
+  { value: 'APPEND', label: '追加到本章' }, { value: 'CREATE_NODE', label: '新建章节' },
+];
 
 export default function ProjectWorkspace({ project, workspace, sessions, activeSession, messages, onSend, onEnsureSession,
   onSelectSession, onNewChat, onNewProject, onExport, onConversationRefresh, isLoading, hasContentStarted, isSessionLoading, visible, onOpenKnowledgeBases }) {
@@ -47,12 +49,11 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
   const [candidate, setCandidate] = useState(null);
   const [candidateList, setCandidateList] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [reading, setReading] = useState({ title: '', content: '' });
+  const [reading, setReading] = useState(null);
   const [readingLoading, setReadingLoading] = useState(false);
   const [localError, setLocalError] = useState('');
   const [mobileAssistant, setMobileAssistant] = useState(false);
   const containerRef = useRef(null);
-  const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const resizeCleanup = useRef(null);
   const view = workspace.mode === 'agent' ? workspace.agentView : workspace.studioView;
@@ -60,6 +61,9 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
   const sessionCandidates = workspace.candidates.filter((item) => (item.sourceSessionId || item.sessionId) === activeSession?.id);
   const visibleOperation = isLoading && workspace.taskTarget ? workspace.taskTarget.operation : operation;
   const visibleTarget = isLoading && workspace.taskTarget ? workspace.nodes.find((node) => node.id === workspace.taskTarget.nodeId) : workspace.activeNode;
+  const targetHint = visibleTarget
+    ? `${visibleTarget.title} · ${visibleOperation === 'CREATE_NODE' ? '采纳时新建章节' : '采纳后更新正文'}`
+    : '请先选择正文节点';
   const setView = (next) => workspace.preferences(workspace.mode === 'agent' ? { agentView: next } : { studioView: next });
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [messages]);
@@ -67,7 +71,7 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
     if (view !== 'reading' || !project?.id) return undefined;
     let cancelled = false;
     setReadingLoading(true);
-    getReading(project.id).then((result) => { if (!cancelled) setReading(result); })
+    getReading(project.id).then((result) => { if (!cancelled) setReading({ ...result, projectId: project.id }); })
       .catch((failure) => { if (!cancelled) setLocalError(failure.message); }).finally(() => { if (!cancelled) setReadingLoading(false); });
     return () => { cancelled = true; };
   }, [view, project?.id, workspace.revision]);
@@ -151,12 +155,12 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
     </header>
     {(workspace.error || localError) && <div className="workspace-error-banner" role="alert">{workspace.error || localError}<button type="button" aria-label="关闭错误提示" onClick={() => { workspace.patch({ error: '' }); setLocalError(''); }}><X size={15} /></button></div>}
     <div className="workspace-panels">
-      <div className="workspace-editor-pane"><WorkEditor workspace={workspace} onSend={onSend} isLoading={isLoading} sessionId={activeSession?.id} knowledgeBaseLabel={knowledgeBaseLabel}
-        onOpenProjectKnowledgeBases={openProjectKnowledgeBases}
+      <div className="workspace-editor-pane"><WorkEditor workspace={workspace} isLoading={isLoading} sessionId={activeSession?.id}
         onEnsureSession={onEnsureSession} onCandidate={setCandidate} onConversationRefresh={onConversationRefresh} /></div>
       <section className="workspace-reading-pane" aria-label="全文阅读">
         {Object.values(workspace.drafts).some((draft) => draft.dirty) && <p className="workspace-notice">部分修改尚未保存，当前全文按已保存快照展示。</p>}
-        {readingLoading ? <p className="workspace-muted">加载全文…</p> : <article className="workspace-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reading.content || '暂无正文'}</ReactMarkdown></article>}
+        {readingLoading ? <p className="workspace-muted">加载全文…</p> : <article className="workspace-markdown"
+          dangerouslySetInnerHTML={{ __html: markdownToHtml((reading?.projectId === projectId ? reading?.content : '') || '暂无正文') }} />}
       </section>
       <div className="workspace-resizer" role="separator" aria-orientation="vertical" aria-label="调整助手宽度" aria-valuenow={workspace.widths?.[workspace.mode] || 360} tabIndex={0}
         onPointerDown={resize} onKeyDown={(event) => {
@@ -171,12 +175,8 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
         {workspace.mode === 'studio' && <button className="workspace-icon-button workspace-mobile-toggle" type="button" aria-label="关闭助手" onClick={() => setMobileAssistant(false)}><X size={17} /></button>}
       </header>
         <div className="workspace-message-scroll">{isSessionLoading && <p className="workspace-muted">加载会话…</p>}
-          {!messages.length && !isSessionLoading && <div className="workspace-chat-welcome"><div className="chat-welcome-mark"><BrandMark size={42} /></div>
-            <div className="starter-grid">{[
-              { icon: Feather, title: '构思灵感', prompt: '我有一个新的写作想法，请和我一起讨论主题、读者与表达方向。' },
-              { icon: ListTree, title: '梳理结构', prompt: '请帮我梳理这部作品的内容结构，我们先讨论核心主题和章节安排。' },
-              { icon: Search, title: '研究主题', prompt: '我想为这部作品做一些前期研究，请先帮我列出需要了解的关键问题。' },
-            ].map((item) => { const Icon = item.icon; const { title, prompt } = item; return <button type="button" key={title} disabled={isLoading} onClick={() => inputRef.current?.insertPrompt(prompt)}><Icon size={20} strokeWidth={1.5} /><span className="starter-label">{title}</span><ArrowUpRight size={15} /></button>; })}</div>
+          {!messages.length && !isSessionLoading && <div className="workspace-chat-welcome">
+            <h2>创作助手</h2><p>讨论构思、查资料，或起草章节。</p>
           </div>}
           {messages.map((message) => <MessageBubble key={message.id} message={message} onExport={onExport} />)}
           {isLoading && !hasContentStarted && <p className="workspace-muted" role="status">正在处理写作任务…</p>}
@@ -185,10 +185,8 @@ export default function ProjectWorkspace({ project, workspace, sessions, activeS
             <p>{item.content.slice(0, 150)}{item.content.length > 150 ? '…' : ''}</p><button className="workspace-action" type="button" onClick={() => setCandidate(item)}>{item.status === 'ADOPTED' ? '查看修改' : '预览修改'}</button>
           </div>)}<div ref={messagesEndRef} />
         </div>
-        <div className="workspace-task-target"><label htmlFor="workspace-task-target">本次写入目标</label><SelectField id="workspace-task-target" aria-label="本次写入目标" value={visibleOperation} disabled={isLoading} onChange={setOperation}
-          options={operations.map(([value, label]) => ({ value, label }))} />
-          {visibleOperation !== 'DISCUSS' && <span title={visibleTarget?.title}>{visibleTarget?.title || '请先选择正文节点'} · {visibleOperation === 'CREATE_NODE' ? '采纳时新建章节' : '采纳后更新正文'}</span>}</div>
-        <InputBox ref={inputRef} onSend={send} disabled={isSessionLoading || workspace.loading} isLoading={isLoading} sessionId={activeSession?.id || ''} knowledgeBaseLabel={knowledgeBaseLabel} onOpenProjectKnowledgeBases={openProjectKnowledgeBases} />
+        <InputBox onSend={send} disabled={isSessionLoading || workspace.loading} isLoading={isLoading} sessionId={activeSession?.id || ''}
+          target={{ value: visibleOperation, options: operations, hint: targetHint, onChange: setOperation }} />
       </aside>
       {workspace.mode === 'studio' && workspace.assistantCollapsed && <button className="workspace-assistant-rail" type="button" aria-label="展开创作助手" onClick={() => workspace.preferences({ assistantCollapsed: false })}><PanelRightOpen size={18} /><span>创作助手</span>{pending.length > 0 && <span>{pending.length}</span>}</button>}
     </div>

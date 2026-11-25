@@ -9,6 +9,16 @@ const markdownIt = new MarkdownIt({
   breaks: false,
 }).use(taskLists, { enabled: true, label: true });
 
+// Highlights round-trip through Markdown without enabling arbitrary HTML.
+markdownIt.inline.ruler.before('html_inline', 'highlight', (state, silent) => {
+  const tag = state.src.startsWith('<mark>', state.pos) ? '<mark>'
+    : state.src.startsWith('</mark>', state.pos) ? '</mark>' : '';
+  if (!tag) return false;
+  if (!silent) state.push('html_inline', '', 0).content = tag;
+  state.pos += tag.length;
+  return true;
+});
+
 const turndown = new TurndownService({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
@@ -17,6 +27,10 @@ const turndown = new TurndownService({
 });
 
 turndown.use(gfm);
+turndown.addRule('highlight', {
+  filter: 'mark',
+  replacement: (content) => `<mark>${content}</mark>`,
+});
 
 turndown.addRule('taskListItems', {
   filter: (node) => node.nodeName === 'LI' && node.classList?.contains('task-list-item'),

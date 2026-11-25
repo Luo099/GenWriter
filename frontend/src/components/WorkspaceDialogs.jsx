@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { X } from 'lucide-react';
 import { getDocument } from '../api/documents';
 import { getAllKnowledgeBases } from '../api/knowledgeBases';
 import { getProjectKnowledgeBases, replaceProjectKnowledgeBases } from '../api/projects';
 import * as api from '../api/workspace';
+import { markdownToHtml } from '../utils/markdownEditor';
 import SelectField from './SelectField';
 
 export function WorkspaceModal({ title, onClose, children, footer, wide = false }) {
@@ -152,8 +151,10 @@ export function CandidateDialog({ candidate, workspace, onClose }) {
     {!adopted && dirty && <p className="workspace-error" role="alert">目标节点有未保存修改，请先保存并重新生成候选。</p>}
     {error && <p className="workspace-error" role="alert">{error}</p>}
     {loading ? <p>加载基准快照…</p> : <div className="candidate-comparison">
-      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '原章节（保留）' : '基准正文'}</span><div className="workspace-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{base?.content || '此节点暂无正文。'}</ReactMarkdown></div></section>
-      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '新章节候选' : '采纳后的正文'}</span><div className="workspace-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{proposed}</ReactMarkdown></div></section>
+      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '原章节（保留）' : '基准正文'}</span>
+        <div className="workspace-markdown" dangerouslySetInnerHTML={{ __html: markdownToHtml(base?.content || '此节点暂无正文。') }} /></section>
+      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '新章节候选' : '采纳后的正文'}</span>
+        <div className="workspace-markdown" dangerouslySetInnerHTML={{ __html: markdownToHtml(proposed) }} /></section>
     </div>}
   </WorkspaceModal>;
 }
@@ -191,7 +192,7 @@ export function LegacyDialog({ workspace, onClose }) {
       <label htmlFor="legacy-parent">导入到</label><SelectField id="legacy-parent" aria-label="导入到节点" value={parentId} onChange={setParentId} options={workspace.nodes.map((node) => ({ value: node.id, label: node.title }))} />
       <div className="legacy-browser"><nav aria-label="历史文稿列表">{documents.map((document) => <button type="button" key={document.id} className={selected?.id === document.id ? 'selected' : ''} onClick={() => setSelected(document)}>
         <span>{document.title}</span><small>原版本 V{document.version} · {new Date(document.updatedAt).toLocaleDateString()}</small>
-      </button>)}</nav><article className="workspace-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{selected?.content || ''}</ReactMarkdown></article></div>
+      </button>)}</nav><article className="workspace-markdown" dangerouslySetInnerHTML={{ __html: markdownToHtml(selected?.content) }} /></div>
     </>}
   </WorkspaceModal>;
 }

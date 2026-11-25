@@ -1,64 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, CircleDashed, History, X } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ChevronDown, X } from 'lucide-react';
 import { formatVersionTime, getDocumentSourceLabel } from '../utils/version';
 
-const sortVersions = (documents) => [...documents].sort((left, right) => {
-  const versionDifference = (right.version || 0) - (left.version || 0);
-  if (versionDifference !== 0) return versionDifference;
-  return new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime();
-});
+const sortVersions = (documents) => [...documents].sort((left, right) =>
+  (right.version || 0) - (left.version || 0)
+  || new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime());
 
-const visibleVersionsFor = (documents, selectedIndex) => {
-  if (documents.length <= 4) return documents;
-
-  const indices = new Set([0, Math.max(selectedIndex, 0)]);
-  let distance = 1;
-  while (indices.size < 4 && distance < documents.length) {
-    const newerIndex = selectedIndex - distance;
-    const olderIndex = selectedIndex + distance;
-    if (newerIndex >= 0) indices.add(newerIndex);
-    if (indices.size < 4 && olderIndex < documents.length) indices.add(olderIndex);
-    distance += 1;
-  }
-
-  for (let index = 0; indices.size < 4 && index < documents.length; index += 1) {
-    indices.add(index);
-  }
-
-  return [...indices]
-    .sort((left, right) => left - right)
-    .map((index) => documents[index]);
-};
-
-const VersionBadge = ({ tone = '', children }) => (
-  <span className={`version-badge${tone ? ` ${tone}` : ''}`}>{children}</span>
-);
-
-const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) => {
+export default function VersionNavigator({ documents, selectedId, dirty, loading, onSelect }) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const titleId = useId();
+  const triggerRef = useRef(null);
   const drawerRef = useRef(null);
   const closeButtonRef = useRef(null);
-  const previousFocusRef = useRef(null);
-  const sortedDocuments = useMemo(() => sortVersions(documents), [documents]);
-  const selectedIndex = sortedDocuments.findIndex((document) => document.id === selectedId);
-  const selectedDocument = selectedIndex >= 0 ? sortedDocuments[selectedIndex] : null;
-  const latestDocument = sortedDocuments[0] || null;
-  const visibleDocuments = visibleVersionsFor(sortedDocuments, selectedIndex);
-  const newerDocument = selectedIndex > 0 ? sortedDocuments[selectedIndex - 1] : null;
-  const olderDocument = selectedIndex >= 0 && selectedIndex < sortedDocuments.length - 1
-    ? sortedDocuments[selectedIndex + 1]
-    : null;
+  const versions = useMemo(() => sortVersions(documents), [documents]);
+  const selectedIndex = Math.max(0, versions.findIndex((entry) => entry.id === selectedId));
+  const selectedDocument = versions[selectedIndex];
 
   useEffect(() => {
     if (!historyOpen) return undefined;
-
-    previousFocusRef.current = document.activeElement;
-    const focusTimer = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
-
-    return () => {
-      window.cancelAnimationFrame(focusTimer);
-      previousFocusRef.current?.focus?.();
-    };
+    const trigger = triggerRef.current;
+    closeButtonRef.current?.focus();
+    return () => trigger?.focus();
   }, [historyOpen]);
 
   const closeHistory = () => setHistoryOpen(false);
@@ -66,6 +28,7 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
   const handleDrawerKeyDown = (event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation();
       closeHistory();
       return;
     }
@@ -84,165 +47,46 @@ const VersionNavigator = ({ documents, selectedId, dirty, loading, onSelect }) =
     }
   };
 
-  const selectFromHistory = (document) => {
-    closeHistory();
-    onSelect(document);
-  };
+  if (loading || !selectedDocument) return null;
 
-  if (loading) {
-    return (
-      <section className="version-navigator" aria-label="版本导航">
-        <span className="workbench-muted">加载版本中...</span>
-      </section>
-    );
-  }
+  return <div className="version-compact">
+    <button className="workspace-action version-trigger" type="button" ref={triggerRef} aria-haspopup="dialog"
+      aria-expanded={historyOpen} aria-keyshortcuts="ArrowLeft ArrowRight"
+      aria-label={`版本历史，当前查看 V${selectedDocument.version}`}
+      title={versions.length > 1 ? '版本历史 · ← 较早版本 / → 较新版本' : '版本历史'}
+      onClick={() => setHistoryOpen(true)}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        const adjacent = versions[selectedIndex + (event.key === 'ArrowLeft' ? 1 : -1)];
+        if (adjacent) onSelect(adjacent);
+      }}>
+      <span>V{selectedDocument.version}</span><ChevronDown size={13} />
+    </button>
 
-  if (!selectedDocument) {
-    return (
-      <section className="version-navigator empty" aria-label="版本导航">
-        <CircleDashed size={14} />
-        <strong>尚未创建版本</strong>
-
-      </section>
-    );
-  }
-
-  return (
-    <section className="version-navigator" aria-label="版本导航">
-      <div className="version-summary">
-        <div className="version-summary-main">
-          <span className="version-kicker">{selectedDocument.id === latestDocument?.id ? '当前版本' : '历史版本'}</span>
-          <div className="version-summary-heading">
-            <strong>V{selectedDocument.version}</strong>
-            <VersionBadge tone="current">查看中</VersionBadge>
-            {selectedDocument.id === latestDocument?.id && <VersionBadge tone="latest">最新</VersionBadge>}
-            {dirty && <VersionBadge tone="dirty">未保存</VersionBadge>}
-          </div>
-          <div className="version-summary-meta" title={`${getDocumentSourceLabel(selectedDocument)} · ${formatVersionTime(selectedDocument.updatedAt)}`}>
-            {getDocumentSourceLabel(selectedDocument)} · {formatVersionTime(selectedDocument.updatedAt)}
-          </div>
-        </div>
-
-        <div className="version-nav-actions">
-          <button
-            className="version-icon-action"
-            type="button"
-            disabled={!newerDocument}
-            onClick={() => onSelect(newerDocument)}
-            title={newerDocument ? `查看更新版本 V${newerDocument.version}` : '已经是最新版本'}
-            aria-label={newerDocument ? `查看更新版本 V${newerDocument.version}` : '已经是最新版本'}
-          >
-            <ChevronLeft size={17} />
-          </button>
-          <button
-            className="version-icon-action"
-            type="button"
-            disabled={!olderDocument}
-            onClick={() => onSelect(olderDocument)}
-            title={olderDocument ? `查看更早版本 V${olderDocument.version}` : '已经是最早版本'}
-            aria-label={olderDocument ? `查看更早版本 V${olderDocument.version}` : '已经是最早版本'}
-          >
-            <ChevronRight size={17} />
-          </button>
-          <button
-            className="version-history-button"
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            title={`查看全部 ${sortedDocuments.length} 个版本`}
-            aria-haspopup="dialog"
-          >
-            <History size={16} />
-            <span>历史 {sortedDocuments.length}</span>
-          </button>
+    {historyOpen && <div className="version-drawer-layer" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) closeHistory();
+    }}>
+      <div ref={drawerRef} className="version-history-drawer" role="dialog" aria-modal="true"
+        aria-labelledby={titleId} onKeyDown={handleDrawerKeyDown}>
+        <header className="version-history-header">
+          <div><h3 id={titleId}>版本历史</h3>{dirty && <p className="workspace-muted">当前正文有未保存修改</p>}</div>
+          <button ref={closeButtonRef} className="version-icon-action" type="button" aria-label="关闭版本历史"
+            onClick={closeHistory}><X size={18} /></button>
+        </header>
+        <div className="version-history-list">
+          {versions.map((entry, index) => <button className={`version-history-item${index === selectedIndex ? ' active' : ''}`}
+            type="button" key={entry.id} aria-current={index === selectedIndex ? 'true' : undefined}
+            onClick={() => { closeHistory(); onSelect(entry); }}>
+            <span className="version-history-number">V{entry.version}</span>
+            <span className="version-history-copy">
+              <span className="version-history-title" title={entry.title || '未命名文稿'}>{entry.title || '未命名文稿'}</span>
+              <small>{getDocumentSourceLabel(entry)} · {formatVersionTime(entry.updatedAt)}</small>
+            </span>
+            {index === 0 && <span className="version-badge latest">最新</span>}
+          </button>)}
         </div>
       </div>
-
-      {documents.length > 1 && (
-      <div className="version-neighbors" aria-label="相邻版本">
-        {visibleDocuments.map((document) => {
-          const isCurrent = document.id === selectedId;
-          const isLatest = document.id === latestDocument?.id;
-          return (
-            <button
-              key={document.id}
-              type="button"
-              className={`version-chip${isCurrent ? ' active' : ''}`}
-              onClick={() => onSelect(document)}
-              title={`${document.title || '未命名文稿'} · ${getDocumentSourceLabel(document)}`}
-              aria-current={isCurrent ? 'page' : undefined}
-            >
-              <span>V{document.version}</span>
-              <small>{isCurrent ? '查看中' : isLatest ? '最新' : getDocumentSourceLabel(document)}</small>
-            </button>
-          );
-        })}
-      </div>
-      )}
-
-      {historyOpen && (
-        <div
-          className="version-drawer-layer"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeHistory();
-          }}
-        >
-          <div
-            ref={drawerRef}
-            className="version-history-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="version-history-title"
-            onKeyDown={handleDrawerKeyDown}
-          >
-            <div className="version-history-header">
-              <div>
-                <span className="version-kicker">版本记录</span>
-                <h1 id="version-history-title" className="dialog-title">全部版本</h1>
-              </div>
-              <button
-                ref={closeButtonRef}
-                className="version-icon-action"
-                type="button"
-                onClick={closeHistory}
-                title="关闭版本历史"
-                aria-label="关闭版本历史"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="version-history-list">
-              {sortedDocuments.map((document) => {
-                const isCurrent = document.id === selectedId;
-                const isLatest = document.id === latestDocument?.id;
-                return (
-                  <button
-                    key={document.id}
-                    type="button"
-                    className={`version-history-item${isCurrent ? ' active' : ''}`}
-                    onClick={() => selectFromHistory(document)}
-                    aria-current={isCurrent ? 'page' : undefined}
-                  >
-                    <span className="version-history-number">V{document.version}</span>
-                    <span className="version-history-copy">
-                      <span className="version-history-title" title={document.title || '未命名文稿'}>
-                        {document.title || '未命名文稿'}
-                      </span>
-                      <small>{getDocumentSourceLabel(document)} · {formatVersionTime(document.updatedAt)}</small>
-                    </span>
-                    <span className="version-history-status">
-                      {isCurrent && <VersionBadge tone="current">查看中</VersionBadge>}
-                      {isLatest && <VersionBadge tone="latest">最新</VersionBadge>}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-};
-
-export default VersionNavigator;
+    </div>}
+  </div>;
+}

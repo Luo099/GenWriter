@@ -866,10 +866,10 @@
 .input-wrapper {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 8px;
   min-height: 58px;
-  padding: 8px 58px 8px 10px;
+  padding: 8px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -904,9 +904,7 @@
 }
 
 .send-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+  flex-shrink: 0;
   width: 38px;
   height: 38px;
   background: var(--accent-color);
@@ -1216,7 +1214,6 @@
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   border: 1px solid rgba(120, 113, 108, 0.24);
   border-radius: var(--radius-card);
   background:
@@ -1231,11 +1228,11 @@
 
 .editor-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-height: 42px;
   padding: 6px 8px;
-  overflow-x: auto;
   border-bottom: 1px solid rgba(214, 211, 209, 0.8);
   background: rgba(255, 251, 245, 0.82);
   backdrop-filter: blur(10px);
@@ -1245,12 +1242,6 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding-right: 6px;
-  border-right: 1px solid rgba(214, 211, 209, 0.9);
-}
-
-.editor-toolbar-group:last-of-type {
-  border-right: none;
 }
 
 .editor-toolbar-button,
@@ -1277,13 +1268,6 @@
   border-color: rgba(194, 133, 74, 0.32);
   background: var(--accent-soft);
   color: var(--accent-on-soft);
-}
-
-.editor-toolbar-button.active,
-.editor-format-group button.active {
-  border-color: rgba(194, 133, 74, 0.4);
-  background: #292524;
-  color: #fff;
 }
 
 .editor-toolbar-button:disabled,
@@ -5608,7 +5592,7 @@
 
   .input-wrapper {
     min-height: 54px;
-    padding: 7px 54px 7px 8px;
+    padding: 7px;
   }
 
   .attachment-btn {
@@ -5617,8 +5601,6 @@
   }
 
   .send-btn {
-    right: 8px;
-    bottom: 8px;
     width: 36px;
     height: 36px;
   }

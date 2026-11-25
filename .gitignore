@@ -69,3 +69,6 @@ replay_pid*.log
 temp_request.json
 /org/
 *.class
+
+### 测试源码（本地保留，不纳入仓库） ###
+/src/test/

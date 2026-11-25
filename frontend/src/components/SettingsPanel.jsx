@@ -2,22 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import * as llmApi from '../api/llmProviders';
 import * as settingsApi from '../api/settings';
 import SelectField from './SelectField';
-
-const PROVIDER_TYPE_LABEL = {
-  dashscope: '通义千问',
-  deepseek: 'DeepSeek',
-  moonshot: 'Kimi',
-  zhipu: '智谱GLM',
-  openai_compatible: 'OpenAI 兼容',
-};
-
-const PROVIDER_TYPE_COLOR = {
-  dashscope: '#78716c',
-  deepseek: '#78716c',
-  moonshot: '#78716c',
-  zhipu: '#78716c',
-  openai_compatible: '#78716c',
-};
+import PageHeading from './PageHeading';
+import ThemeSettings from './ThemeSettings';
 
 const SettingsPanel = () => {
   const [providers, setProviders] = useState([]);
@@ -109,26 +95,16 @@ const SettingsPanel = () => {
     }
   };
 
-  if (loading && providers.length === 0) {
-    return (
-      <div className="settings-panel">
-        <div className="settings-loading">加载中...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="settings-panel">
-      <div className="settings-header">
-        <div className="settings-header-left">
-          <h1 className="settings-title">系统设置</h1>
-        </div>
-      </div>
+      <PageHeading title="设置" />
+      <ThemeSettings />
 
       {error && (
         <div className="settings-error">
           <span>{error}</span>
-          <button onClick={() => setError(null)}>&times;</button>
+          <button aria-label="关闭错误提示" onClick={() => setError(null)}>&times;</button>
         </div>
       )}
 
@@ -145,34 +121,20 @@ const SettingsPanel = () => {
         </div>
       )}
 
+      {loading && !providers.length && <p className="settings-model-loading" role="status">加载模型…</p>}
       {/* 供应商列表 */}
       <div className="settings-provider-list">
         <div className="settings-provider-card settings-output-card">
-          <div className="settings-provider-header">
-            <div className="settings-provider-title-row">
-              <span className="settings-provider-badge settings-output-badge">输出</span>
-              <h3 className="settings-provider-name">输出格式</h3>
-              <span className="settings-active-tag">
-                {outputSettings.markdownEnabled ? 'Markdown' : '纯文本'}
-              </span>
-            </div>
-            <div className="settings-provider-meta">
-              <span>控制 AI 最终写作结果的格式。</span>
-            </div>
-          </div>
+          <div className="settings-provider-header settings-output-header"><span className="settings-provider-name">输出格式</span><span className="settings-runtime-tag">本次运行</span></div>
           <div className="settings-provider-body">
             <div className="settings-toggle-row">
               <div>
-                <div className="settings-toggle-title">允许 Markdown 格式</div>
-                <div className="settings-toggle-description">
-                  {outputSettings.markdownEnabled
-                    ? 'AI 可以使用标题、列表和强调等 Markdown 语法。'
-                    : 'AI 将只输出纯文本，适合直接复制到无格式编辑器。'}
-                </div>
+                <div className="settings-toggle-title">Markdown</div>
+
               </div>
               <button
                 type="button"
-                className={`settings-toggle ${outputSettings.markdownEnabled ? 'active' : ''}`}
+                aria-label="允许 Markdown 格式" className={`settings-toggle ${outputSettings.markdownEnabled ? 'active' : ''}`}
                 onClick={handleMarkdownToggle}
                 disabled={savingOutputSettings}
                 aria-pressed={outputSettings.markdownEnabled}
@@ -195,24 +157,17 @@ const SettingsPanel = () => {
             >
               <div className="settings-provider-header">
                 <div className="settings-provider-title-row">
-                  <span
-                    className="settings-provider-badge"
-                    style={{
-                      background: PROVIDER_TYPE_COLOR[provider.type] || '#6b7280',
-                    }}
-                  >
-                    {PROVIDER_TYPE_LABEL[provider.type] || provider.type}
-                  </span>
-                  <h3 className="settings-provider-name">{provider.displayName}</h3>
+                  <span className="settings-provider-mark" aria-hidden="true">{(provider.displayName || provider.type).slice(0, 1)}</span>
+                  <span className="settings-provider-name">{provider.displayName}</span>
                   {isActive && <span className="settings-active-tag">使用中</span>}
                 </div>
                 <div className="settings-provider-meta">
                   <span className="settings-api-key">
-                    API Key: {provider.apiKey}
+                    密钥： {provider.apiKey}
                   </span>
                   {provider.baseUrl && (
                     <span className="settings-base-url">
-                      URL: {provider.baseUrl}
+                      地址： {provider.baseUrl}
                     </span>
                   )}
                 </div>
@@ -257,11 +212,7 @@ const SettingsPanel = () => {
         })}
       </div>
 
-      <div className="settings-footer">
-        <p className="settings-footer-hint">
-          供应商配置通过 application.yml 管理；输出格式开关为运行时设置，重启后回到配置默认值。
-        </p>
-      </div>
+
     </div>
   );
 };

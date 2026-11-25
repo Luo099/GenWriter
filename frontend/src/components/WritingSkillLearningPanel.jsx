@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PageHeading from './PageHeading';
 import * as writingSkillsApi from '../api/writingSkills';
 
 const WritingSkillLearningPanel = ({ projectId, onBack }) => {
@@ -37,22 +38,8 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
   };
 
   return (
-    <div className="memory-panel">
-      <div className="memory-panel-header">
-        <div className="memory-panel-header-left">
-          <button className="memory-back-btn" onClick={onBack} title="返回">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-          </button>
-          <div>
-            <div className="memory-panel-title">风格学习</div>
-            <div className="memory-panel-subtitle">让 AI 从示例文章中提取写作技巧</div>
-          </div>
-        </div>
-      </div>
-
+    <div className="memory-panel learning-page">
+      <PageHeading title="风格学习" onBack={onBack} />
       <div className="learning-panel-body">
         {error && (
           <div className="learning-error" onClick={() => setError(null)}>
@@ -62,14 +49,14 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
 
         <div className="learning-form">
           <div className="learning-form-group">
-            <label>
+            <label htmlFor="learning-article">
               示例文章
               <span className="required">*</span>
             </label>
             <textarea
-              className="learning-textarea"
+              id="learning-article" className="learning-textarea"
               rows={12}
-              placeholder="将您希望系统学习的文章粘贴到这里..."
+              placeholder="粘贴示例文章…"
               value={articleContent}
               onChange={(e) => setArticleContent(e.target.value)}
             />
@@ -79,11 +66,11 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
           </div>
 
           <div className="learning-form-group">
-            <label>学习说明（可选）</label>
+            <label htmlFor="learning-description">学习重点 <span className="field-optional">可选</span></label>
             <input
-              className="learning-input"
+              id="learning-description" className="learning-input"
               type="text"
-              placeholder="例如：重点学习叙事节奏和对话技巧"
+              placeholder="叙事节奏、对话或语言风格"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -93,7 +80,7 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
             <label>适用范围</label>
             <div className="learning-scope-options">
               <button
-                className={`learning-scope-btn ${scope === 'GLOBAL' ? 'active' : ''}`}
+                aria-pressed={scope === 'GLOBAL'} className={`learning-scope-btn ${scope === 'GLOBAL' ? 'active' : ''}`}
                 onClick={() => setScope('GLOBAL')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,7 +91,7 @@ const WritingSkillLearningPanel = ({ projectId, onBack }) => {
                 全局可用
               </button>
               <button
-                className={`learning-scope-btn ${scope === 'PROJECT' ? 'active' : ''}`}
+                aria-pressed={scope === 'PROJECT'} className={`learning-scope-btn ${scope === 'PROJECT' ? 'active' : ''}`}
                 onClick={() => setScope('PROJECT')}
                 disabled={!projectId}
               >

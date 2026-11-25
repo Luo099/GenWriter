@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as memoriesApi from '../api/memories';
 import SelectField from './SelectField';
+import PageHeading from './PageHeading';
+import DialogSurface from './DialogSurface';
+import EmptyState from './EmptyState';
 
 const MEMORY_TYPE_MAP = {
   WRITING_PREFERENCE: '写作偏好',
@@ -29,9 +32,14 @@ const IMPORTANCE_LABEL = {
   LOW: '低',
 };
 
+function MemoryPreview({ content = '' }) {
+  const structured = /^\s*## Name\s*\r?\n([^\n]+)\r?\n+\s*## Details\s*\r?\n([\s\S]*)/u.exec(content);
+  return <div className="memory-card-content" title={content}>{structured ? <><strong>{structured[1]}</strong><p>{structured[2]}</p></> : content}</div>;
+}
+
 const MemoryPanel = ({ projectId, onBack }) => {
   const [memories, setMemories] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -220,26 +228,8 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
   return (
     <div className="memory-panel">
-      <div className="memory-panel-header">
-        <div className="memory-panel-header-left">
-          {onBack && (
-            <button className="memory-back-btn" onClick={onBack} title="返回">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-          )}
-          <h2 className="memory-panel-title">长期记忆</h2>
-          <span className="memory-panel-count">共 {total} 条</span>
-        </div>
-        <button className="memory-new-btn" onClick={handleOpenCreate}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          新建记忆
-        </button>
-      </div>
+      <PageHeading title="长期记忆" count={`${total} 条`} onBack={onBack}
+        actions={<button className="memory-new-btn" onClick={handleOpenCreate}><span aria-hidden="true">＋</span> 新建记忆</button>} />
 
       <div className="memory-toolbar">
         <div className="memory-search">
@@ -277,10 +267,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
           <p>加载中...</p>
         </div>
       ) : memories.length === 0 ? (
-        <div className="memory-empty">
-          <p>暂无记忆</p>
-          <span>系统会在对话中自动提取记忆，您也可以手动添加</span>
-        </div>
+        <EmptyState filtered={Boolean(keyword || filterType || filterScope || filterImportance)} title={keyword || filterType || filterScope || filterImportance ? '无匹配记忆' : '暂无记忆'} action={keyword || filterType || filterScope || filterImportance ? '清除筛选' : '新建记忆'} onAction={keyword || filterType || filterScope || filterImportance ? () => { setKeyword(''); setFilterType(''); setFilterScope(''); setFilterImportance(''); } : handleOpenCreate} />
       ) : (
         <>
           <div className="memory-table-header">
@@ -308,9 +295,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                     onChange={() => toggleSelect(m.id)}
                   />
                 </label>
-                <div className="memory-card-content" title={m.content}>
-                  {m.content}
-                </div>
+                <MemoryPreview content={m.content} />
                 <div className="memory-card-type">
                   <span className={`memory-badge memory-badge-type-${m.memoryType}`}>
                     {MEMORY_TYPE_MAP[m.memoryType] || m.memoryType}
@@ -375,10 +360,10 @@ const MemoryPanel = ({ projectId, onBack }) => {
 
       {showModal && (
         <div className="memory-modal-overlay" onClick={handleCloseModal}>
-          <div className="memory-modal" onClick={(e) => e.stopPropagation()}>
+          <DialogSurface className="memory-modal" label={editingMemory ? '编辑记忆' : '新建记忆'} onClose={handleCloseModal} busy={saving}>
             <div className="memory-modal-header">
-              <h3>{editingMemory ? '编辑记忆' : '新建记忆'}</h3>
-              <button className="memory-modal-close" onClick={handleCloseModal}>
+              <h1 className="dialog-title">{editingMemory ? '编辑记忆' : '新建记忆'}</h1>
+              <button className="memory-modal-close" aria-label="关闭对话框" onClick={handleCloseModal}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -388,8 +373,9 @@ const MemoryPanel = ({ projectId, onBack }) => {
             <div className="memory-modal-body">
               {formError && <div className="memory-form-error">{formError}</div>}
               <div className="memory-form-group">
-                <label>记忆内容 <span className="required">*</span></label>
+                <label htmlFor="memory-content">记忆内容 <span className="required">*</span></label>
                 <textarea
+                  id="memory-content"
                   rows={4}
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -433,7 +419,7 @@ const MemoryPanel = ({ projectId, onBack }) => {
                 {saving ? '保存中...' : '保存'}
               </button>
             </div>
-          </div>
+          </DialogSurface>
         </div>
       )}
     </div>

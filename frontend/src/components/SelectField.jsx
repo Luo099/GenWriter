@@ -61,14 +61,15 @@ export default function SelectField({
     };
     document.addEventListener('pointerdown', handlePointer, true);
     document.addEventListener('focusin', handleFocus);
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    const handleReposition = () => setPosition(updatePosition());
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', handlePointer, true);
       document.removeEventListener('focusin', handleFocus);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
     };
   }, [open]);
 

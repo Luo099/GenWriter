@@ -388,7 +388,7 @@ const WritingWorkbench = ({ sessionId, isLoading, documentRefresh, onIterate, co
   return (
     <aside className="writing-workbench">
       <div className="workbench-header">
-        <h2>版本工作台</h2>
+        <span className="workbench-label">版本工作台</span>
         <div className="workbench-header-actions">
           <button
             className="workbench-icon-btn"
@@ -548,7 +548,7 @@ const WritingWorkbench = ({ sessionId, isLoading, documentRefresh, onIterate, co
             onKeyDown={handleConfirmKeyDown}
           >
             <span className="version-kicker">切换版本</span>
-            <h3 id="version-switch-title">保存当前修改吗？</h3>
+            <h1 id="version-switch-title" className="dialog-title">保存当前修改吗？</h1>
             <p id="version-switch-description">
               当前版本有未保存修改。切换到 V{pendingDocument.version} 前，请选择如何处理这些内容。
             </p>

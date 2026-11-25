@@ -20,16 +20,16 @@
 
 :is(.workspace-primary, .new-chat-btn, .memory-new-btn, .memory-btn-primary,
 .export-confirm-btn, .skill-new-btn, .learning-submit-btn) {
-  border: 1px solid var(--accent-color);
+  border: 1px solid var(--accent-border);
   background: var(--accent-color);
   color: var(--text-inverse);
 }
 
 :is(.workspace-primary, .new-chat-btn, .memory-new-btn, .memory-btn-primary,
 .export-confirm-btn, .skill-new-btn, .learning-submit-btn):hover:not(:disabled) {
-  border-color: var(--accent-hover);
+  border-color: var(--accent-border);
   background: var(--accent-hover);
-  color: var(--text-inverse);
+  color: var(--accent-on-hover);
   opacity: 1;
 }
 
@@ -99,7 +99,7 @@ button:disabled {
 button:focus-visible,
 [role='button']:focus-visible,
 summary:focus-visible {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid var(--accent-border);
   outline-offset: 2px;
 }
 
@@ -187,13 +187,13 @@ summary:focus-visible {
 
 .project-item.active .project-name,
 .session-item.active .session-title {
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
 .project-item.active .project-icon,
 .session-item.active .session-icon {
-  color: var(--accent-color);
+  color: var(--accent-on-soft);
 }
 
 .project-session-count {
@@ -274,7 +274,7 @@ summary:focus-visible {
 }
 
 .workspace-view-switch button[aria-pressed='true'] {
-  color: var(--accent-hover);
+  color: var(--accent-text);
   font-weight: var(--weight-medium);
 }
 
@@ -538,7 +538,7 @@ summary:focus-visible {
 
 .work-editor-toolbar .selection-tools button:hover:not(:disabled) {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
 }
 
 .work-editor .rich-markdown-editor {
@@ -600,7 +600,7 @@ summary:focus-visible {
 .editor-format-group button.active {
   border-color: var(--border-subtle);
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
 }
 
 .editor-source-toggle {
@@ -641,7 +641,7 @@ summary:focus-visible {
 }
 
 .work-iteration-heading > svg {
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 
 .work-iteration-heading strong {
@@ -677,7 +677,7 @@ summary:focus-visible {
 .work-operation-pills button.active {
   border-color: var(--border-strong);
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
@@ -693,7 +693,7 @@ summary:focus-visible {
 
 .work-iteration textarea:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: var(--accent-border);
   box-shadow: var(--focus-ring);
 }
 
@@ -758,7 +758,7 @@ summary:focus-visible {
 
 .workspace-message-scroll .message-bubble.assistant .message-avatar {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 
 .workspace-message-scroll .message-role {
@@ -829,7 +829,7 @@ summary:focus-visible {
 .workspace-message-scroll .message-text blockquote {
   margin: 1em 0;
   padding: 6px 12px;
-  border-left: 2px solid var(--accent-color);
+  border-left: 2px solid var(--accent-border);
   background: transparent;
 }
 
@@ -904,7 +904,7 @@ summary:focus-visible {
 
 .select-field-trigger:hover:not(:disabled),
 .select-field.is-open .select-field-trigger {
-  border-color: var(--accent-color);
+  border-color: var(--accent-border);
   background: var(--bg-panel);
 }
 
@@ -931,7 +931,7 @@ summary:focus-visible {
 }
 
 .select-field.is-open .select-field-trigger > svg {
-  color: var(--accent-hover);
+  color: var(--accent-text);
   transform: rotate(180deg);
 }
 
@@ -980,7 +980,7 @@ summary:focus-visible {
 
 .select-field-option > svg {
   flex-shrink: 0;
-  color: var(--accent-hover);
+  color: var(--accent-text);
 }
 
 .select-field-option.is-active {
@@ -990,13 +990,13 @@ summary:focus-visible {
 
 .select-field-option.is-selected {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 
 .select-field-option.is-selected.is-active {
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
 }
 
 .select-field-option[aria-disabled='true'] {
@@ -1101,7 +1101,7 @@ summary:focus-visible {
 .memory-form-group input:focus,
 .memory-form-group textarea:focus,
 .export-dialog-input:focus {
-  border-color: var(--accent-color);
+  border-color: var(--accent-border);
   box-shadow: var(--focus-ring);
 }
 
@@ -1304,7 +1304,7 @@ summary:focus-visible {
 .workspace-chat-pane .websearch-toggle.active {
   border-color: var(--border-strong);
   background: var(--accent-soft);
-  color: var(--accent-hover);
+  color: var(--accent-on-soft);
   font-weight: var(--weight-medium);
 }
 

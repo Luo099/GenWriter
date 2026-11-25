@@ -717,8 +717,8 @@ function App() {
   );
 
   const handleNewChat = useCallback(async () => {
-    if (!activeProject?.id) return;
     try {
+      if (!activeProject?.id) return await ensureSession();
       const created = await sessionsApi.createSession({
         title: '新对话',
         type: 'CHAT',
@@ -731,7 +731,7 @@ function App() {
     } catch (e) {
       setError('创建会话失败: ' + e.message);
     }
-  }, [activeProject]);
+  }, [activeProject, ensureSession]);
 
   const handleDeleteSession = useCallback(
     async (session) => {

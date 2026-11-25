@@ -10,7 +10,9 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
   const treeRef = useRef(null);
   const closeMenus = useCallback(() => { treeRef.current?.querySelectorAll('details[open]').forEach((menu) => { menu.open = false; }); }, []);
   useEffect(() => {
-    const outside = (event) => { if (!(event.target instanceof Element) || !event.target.closest('.tree-menu')) closeMenus(); };
+    const outside = (event) => {
+      if (!(event.target instanceof Element) || !treeRef.current?.contains(event.target.closest('.tree-menu'))) closeMenus();
+    };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [closeMenus]);
@@ -30,7 +32,7 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
       await workspace.mutate(async () => {
         if (dialog.type === 'create') {
           const created = await api.createNode(workspace.projectId, { title, parentId });
-          workspace.selectNode(created.id);
+          onSelect(created.id);
           workspace.patch((current) => ({ expanded: { ...current.expanded, [parentId]: true } }));
         } else if (dialog.type === 'rename') await api.renameNode(workspace.projectId, dialog.node.id, title);
         else if (dialog.type === 'move') await api.moveNode(workspace.projectId, dialog.node.id, { parentId, position: workspace.nodes.filter((node) => node.parentId === parentId).length });
@@ -53,10 +55,27 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
       position: before ? node.position : workspace.nodes.filter((entry) => entry.parentId === node.id).length })).catch(() => {});
   };
 
-  return <section className="work-tree" aria-label="作品正文目录" ref={treeRef}>
+  return <section className="work-tree" aria-label="作品正文目录" ref={treeRef}
+    onKeyDown={(event) => {
+      if (event.key !== 'Escape' || !(event.target instanceof Element)) return;
+      const menu = event.target.closest('details[open]');
+      if (menu) {
+        event.stopPropagation();
+        menu.open = false;
+        menu.querySelector('summary')?.focus();
+      }
+    }}>
     <div className="project-section-header"><span className="section-label">正文目录</span>
-      <button className="section-action-btn" type="button" aria-label="新建章节" disabled={!workspace.rootId || workspace.busy}
-        onClick={() => openDialog('create', workspace.activeNode || byId.get(workspace.rootId))}><Plus size={15} /></button>
+      <details className="tree-menu tree-section-menu" onToggle={(event) => {
+        if (event.currentTarget.open) treeRef.current?.querySelectorAll('details[open]').forEach((menu) => { if (menu !== event.currentTarget) menu.open = false; });
+      }}>
+        <summary aria-label="目录操作" title="目录操作"><MoreHorizontal size={16} /></summary>
+        <div className="tree-menu-items">
+          <button type="button" disabled={!workspace.rootId || workspace.busy}
+            onClick={() => openDialog('create', workspace.activeNode || byId.get(workspace.rootId))}><Plus size={14} />新建章节</button>
+          <button type="button" onClick={() => { closeMenus(); onLegacy(); }}><Archive size={14} />历史文稿</button>
+        </div>
+      </details>
     </div>
     {workspace.loading && !workspace.nodes.length && <p className="workspace-muted">加载作品目录…</p>}
     <div role="tree" aria-label="正文节点">
@@ -68,10 +87,10 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
           style={{ '--tree-depth': depthOf(node) }} draggable={!node.root && !workspace.busy}
           onDragStart={(event) => { event.dataTransfer.setData('application/genwriter-node', node.id); event.dataTransfer.effectAllowed = 'move'; }}
           onDragOver={(event) => { if (event.dataTransfer.types.includes('application/genwriter-node')) event.preventDefault(); }} onDrop={(event) => drop(event, node)}>
-          <button className="tree-expand" type="button" aria-label={expanded ? '收起子节点' : '展开子节点'} disabled={!hasChildren}
+          {hasChildren ? <button className="tree-expand" type="button" aria-label={expanded ? '收起子节点' : '展开子节点'}
             onClick={() => workspace.patch((current) => ({ expanded: { ...current.expanded, [node.id]: !expanded } }))}>
-            {hasChildren ? expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} /> : <span />}
-          </button>
+            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button> : <span className="tree-indent" />}
           <button className="tree-select" type="button" title={node.title} onClick={() => onSelect(node.id)}>
             <FileText size={14} /><span>{node.title}</span>{workspace.drafts[node.id]?.dirty && <i aria-label="有未保存修改">●</i>}
           </button>
@@ -88,11 +107,15 @@ export default function ContentTree({ workspace, onSelect, onLegacy }) {
         </div>;
       })}
     </div>
-    <button className="legacy-entry" type="button" onClick={onLegacy}><Archive size={14} />历史文稿</button>
-    {dialog && <div className="workspace-modal-overlay" onKeyDown={(event) => { if (event.key === 'Escape') setDialog(null); }}>
+    {dialog && <div className="workspace-modal-overlay" onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.stopPropagation(); setDialog(null); }
+    }}>
       <form className="workspace-dialog" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="node-dialog-title">
-        <h1 id="node-dialog-title" className="dialog-title">{{ create: '新建正文节点', rename: '重命名', move: '移动正文节点', delete: '删除正文节点' }[dialog.type]}</h1>
-        {['create', 'rename'].includes(dialog.type) && <label>标题<input autoFocus required maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} /></label>}
+        <h2 id="node-dialog-title">{{ create: '新建正文节点', rename: '重命名', move: '移动正文节点', delete: '删除正文节点' }[dialog.type]}</h2>
+        {['create', 'rename'].includes(dialog.type) && <label>标题<input autoFocus required maxLength={500} value={title}
+          onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault();
+          }} /></label>}
         {['create', 'move'].includes(dialog.type) && <><label htmlFor="node-parent">放入节点</label><SelectField id="node-parent" aria-label="放入节点" value={parentId} onChange={setParentId}
           options={workspace.nodes.filter((node) => dialog.type !== 'move' || !isDescendant(node.id, dialog.node.id)).map((node) => ({ value: node.id, label: `${'　'.repeat(depthOf(node))}${node.title}` }))} /></>}
         {dialog.type === 'delete' && <><p>将从正文目录移除“{dialog.node.title}”及其子节点，全文与导出也将排除这些内容。</p>

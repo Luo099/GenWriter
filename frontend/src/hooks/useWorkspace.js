@@ -2,11 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '../api/workspace';
 
 const preferencesKey = (id) => `genwriter-workspace:${id}`;
-const defaults = () => ({ mode: 'studio', agentView: 'chat', studioView: 'document', assistantCollapsed: false, widths: { studio: 360, agent: 360 } });
+const defaults = () => ({ viewMode: 'split', assistantCollapsed: false, widths: { split: 360 } });
 const readPreferences = (id) => {
+  if (!id) return defaults();
   try {
-    const saved = JSON.parse(localStorage.getItem(preferencesKey(id)) || '{}');
-    return { ...defaults(), ...saved, mode: saved.mode === 'agent' ? 'agent' : 'studio' };
+    const saved = JSON.parse(localStorage.getItem(preferencesKey(id)) || '{}') || {};
+    const oldView = saved.mode === 'agent' ? saved.agentView || 'chat' : saved.studioView;
+    const viewMode = ['split', 'chat', 'reading'].includes(saved.viewMode) ? saved.viewMode
+      : oldView === 'chat' || oldView === 'reading' ? oldView : 'split';
+    const width = saved.widths?.split ?? saved.widths?.studio ?? saved.widths?.agent;
+    return {
+      viewMode,
+      assistantCollapsed: saved.assistantCollapsed === true || (!saved.viewMode && saved.mode === 'agent' && oldView === 'document'),
+      widths: { split: Number.isFinite(width) ? Math.min(600, Math.max(280, width)) : 360 },
+    };
   } catch { return defaults(); }
 };
 const initialState = (id) => ({ ...readPreferences(id), projectId: id, nodes: [], rootId: '', activeNodeId: '', candidates: [],
@@ -30,12 +39,13 @@ export default function useWorkspace(projectId, refreshToken) {
   }, [projectId]);
 
   const preferences = useCallback((change) => patch((current) => {
-    const next = { ...current, ...change };
+    const changes = typeof change === 'function' ? change(current) : change;
+    const next = { ...current, ...changes };
     try {
-      const { mode, agentView, studioView, assistantCollapsed, widths } = next;
-      localStorage.setItem(preferencesKey(projectId), JSON.stringify({ mode, agentView, studioView, assistantCollapsed, widths }));
+      const { viewMode, assistantCollapsed, widths } = next;
+      localStorage.setItem(preferencesKey(projectId), JSON.stringify({ viewMode, assistantCollapsed, widths }));
     } catch { /* The work remains usable if browser storage is unavailable. */ }
-    return change;
+    return changes;
   }), [patch, projectId]);
 
   const refresh = useCallback(async () => {
@@ -81,8 +91,13 @@ export default function useWorkspace(projectId, refreshToken) {
     if (activeNode?.id) loadVersions(activeNode.id).catch((error) => patch({ error: error.message }));
   }, [activeNode?.id, activeNode?.currentDocumentId, activeNode?.title, loadVersions, patch]);
 
-  const selectNode = useCallback((nodeId) => patch((current) => ({ activeNodeId: nodeId,
-    ...(current.mode === 'agent' ? { agentView: 'document' } : { studioView: 'document' }) })), [patch]);
+  const selectNode = useCallback((nodeId, targetDocumentId) => preferences((current) => ({
+    activeNodeId: nodeId,
+    viewMode: 'split',
+    ...(targetDocumentId !== undefined && {
+      selectedVersions: { ...current.selectedVersions, [nodeId]: targetDocumentId },
+    }),
+  })), [preferences]);
 
   const updateDraft = useCallback((nodeId, change) => patch((current) => ({ drafts: { ...current.drafts,
     [nodeId]: { ...current.drafts[nodeId], ...change, dirty: true } } })), [patch]);

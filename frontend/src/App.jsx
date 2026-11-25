@@ -163,7 +163,6 @@ function App() {
   const [activeSession, setActiveSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessages] = useState(false);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasContentStarted, setHasContentStarted] = useState(false);
@@ -793,8 +792,10 @@ function App() {
         if (activeSession?.id === session.id) {
           setActiveSession(sessionList?.[0] || null);
         }
+        return true;
       } catch (e) {
         setError('删除会话失败: ' + e.message);
+        return false;
       }
     },
     [activeSession, activeProject]
@@ -831,8 +832,10 @@ function App() {
         if (activeSession?.id === session.id) {
           setActiveSession((prev) => ({ ...prev, ...session }));
         }
+        return true;
       } catch (e) {
         setError('更新会话失败: ' + e.message);
+        return false;
       }
     },
     [activeSession]
@@ -852,17 +855,11 @@ function App() {
       <Sidebar
         projects={projects}
         activeProject={activeProject}
-        sessions={sessions}
-        activeSession={activeSession}
         view={view}
         onSelectProject={handleSelectProject}
         onNewProject={handleNewProject}
         onDeleteProject={handleDeleteProject}
         onUpdateProject={handleUpdateProject}
-        onSelectSession={handleSelectSession}
-        onNewChat={handleNewChat}
-        onDeleteSession={handleDeleteSession}
-        onUpdateSession={handleUpdateSession}
         onNavigate={setView}
         workspace={workspace}
         onSelectNode={(nodeId) => { setView('chat'); workspace.selectNode(nodeId); }}
@@ -878,19 +875,18 @@ function App() {
             messages={messages}
             onSend={handleSend}
             onEnsureSession={ensureSession}
-            onSelectSession={(session) => { handleSelectSession(session); workspace.preferences({ agentView: 'chat' }); }}
-            onNewChat={async () => { await handleNewChat(); workspace.preferences({ agentView: 'chat', assistantCollapsed: false }); }}
+            onSelectSession={handleSelectSession}
+            onNewChat={handleNewChat}
+            onUpdateSession={handleUpdateSession}
+            onDeleteSession={handleDeleteSession}
             onNewProject={handleNewProject}
             onConversationRefresh={() => setConversationRevision((previous) => previous + 1)}
             onExport={handleExportMessage}
             isLoading={isLoading}
             hasContentStarted={hasContentStarted}
-            loadingMessages={loadingMessages}
             isSessionLoading={isSessionLoading}
             visible={view === 'chat'}
             onOpenKnowledgeBases={() => setView('knowledge-bases')}
-            sessionId={activeSession?.id || ''}
-            documentRefresh={documentRefresh}
           />
         </div>
         {view === 'knowledge-bases' ? (

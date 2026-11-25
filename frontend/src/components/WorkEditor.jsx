@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DOMParser, DOMSerializer } from '@tiptap/pm/model';
-import { PanelRightClose, PanelRightOpen, Type } from 'lucide-react';
+import { Type } from 'lucide-react';
 import RichMarkdownEditor from './RichMarkdownEditor';
 import VersionNavigator from './VersionNavigator';
 import { editSuggestion } from '../api/documents';
@@ -92,18 +92,11 @@ export default function WorkEditor({ workspace, isLoading, sessionId, onEnsureSe
           <Type size={16} /><span>排版</span>
         </button>}
         <VersionNavigator documents={versions} selectedId={selectedId} dirty={Boolean(draft?.dirty)} loading={!ready && workspace.loading}
-          onSelect={(document) => workspace.patch((current) => ({
-            selectedVersions: { ...current.selectedVersions, [node.id]: document.id === node.currentDocumentId ? null : document.id },
-          }))} />
+          onSelect={(document) => workspace.selectNode(node.id, document.id === node.currentDocumentId ? null : document.id)} />
         <button className="workspace-primary work-save-button" type="button" disabled={!canSave}
           title={historical && draft?.dirty ? '请先保存当前正文的修改' : historical ? '将此版正文保存为新快照' : '保存快照（Ctrl / ⌘ + S）'} onClick={save}>
           {saving ? '保存中…' : historical ? '恢复正文' : '保存'}
         </button>
-        {workspace.mode === 'studio' && <button className="workspace-icon-button" type="button"
-          aria-label={workspace.assistantCollapsed ? '展开助手' : '收起助手'}
-          onClick={() => workspace.preferences({ assistantCollapsed: !workspace.assistantCollapsed })}>
-          {workspace.assistantCollapsed ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
-        </button>}
       </div>
     </header>
     <div className="work-editor-scroll" onKeyDown={(event) => {

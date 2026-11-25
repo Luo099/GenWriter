@@ -293,18 +293,18 @@ const InputBox = ({ onSend, disabled, isLoading, sessionId = '', target }) => {
               value={mode} options={MODES} disabled={disabled || isLoading} onChange={setMode} />
           </div>
           <div className="composer-actions">
-            <button
-              aria-label="联网搜索"
-              aria-pressed={webSearch}
-              className="composer-web"
-              onClick={() => setWebSearch((current) => !current)}
-              disabled={disabled || isLoading}
-              type="button"
-              title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
-            >
-              <Globe2 size={15} />
-              <span>联网</span>
-            </button>
+          <button
+            aria-label="联网搜索"
+            aria-pressed={webSearch}
+            className="composer-web"
+            onClick={() => setWebSearch((current) => !current)}
+            disabled={disabled || isLoading}
+            type="button"
+            title={webSearch ? '联网搜索已开启' : '联网搜索已关闭'}
+          >
+            <Globe2 size={15} />
+            <span>联网</span>
+          </button>
             <button className="attachment-btn" type="button" aria-label="添加附件" title="添加附件"
               disabled={disabled || isUploading || isLoading} onClick={() => fileInputRef.current?.click()}>
               <Paperclip size={16} />

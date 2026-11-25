@@ -27,7 +27,7 @@ export function WorkspaceModal({ title, onClose, children, footer, wide = false 
   };
   return <div className="workspace-modal-overlay" onKeyDown={keyDown}>
     <section className={`workspace-dialog${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={dialogRef}>
-      <header className="workspace-dialog-heading"><h1 className="workspace-dialog-title">{title}</h1><button type="button" ref={closeRef} className="workspace-icon-button" onClick={onClose} aria-label="关闭对话框"><X size={18} /></button></header>
+      <header className="workspace-dialog-heading"><h2>{title}</h2><button type="button" ref={closeRef} className="workspace-icon-button" onClick={onClose} aria-label="关闭对话框"><X size={18} /></button></header>
       <div className="workspace-dialog-body">{children}</div>
       {footer && <footer className="workspace-dialog-actions">{footer}</footer>}
     </section>
@@ -142,7 +142,7 @@ export function CandidateDialog({ candidate, workspace, onClose }) {
   };
   const proposed = candidate.operation === 'APPEND' ? `${base?.content || ''}\n\n${candidate.content}` : candidate.content;
   return <WorkspaceModal title={adopted ? '已采纳的修改' : '预览候选修改'} wide onClose={() => { if (!adopting) onClose(); }} footer={<>
-    <span className="workspace-muted">{adopted ? '已保存新版本' : '采纳后保存新版本'}</span>
+    <span className="workspace-muted">{adopted ? '已生成快照，可在节点版本中回看' : '采纳后保存新快照，历史版本保留'}</span>
     <button type="button" onClick={onClose} disabled={adopting}>{adopted ? '关闭' : '保留候选'}</button>
     {!adopted && <button className="workspace-primary" type="button" onClick={adopt} disabled={adopting || loading || stale || dirty}>{adopting ? '采纳中…' : '采纳为新快照'}</button>}
   </>}>
@@ -151,9 +151,9 @@ export function CandidateDialog({ candidate, workspace, onClose }) {
     {!adopted && dirty && <p className="workspace-error" role="alert">目标节点有未保存修改，请先保存并重新生成候选。</p>}
     {error && <p className="workspace-error" role="alert">{error}</p>}
     {loading ? <p>加载基准快照…</p> : <div className="candidate-comparison">
-      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '原章节（保留）' : '基准正文'}</span>
+      <section><h3>{candidate.operation === 'CREATE_NODE' ? '原章节（保留）' : '基准正文'}</h3>
         <div className="workspace-markdown" dangerouslySetInnerHTML={{ __html: markdownToHtml(base?.content || '此节点暂无正文。') }} /></section>
-      <section><span className="comparison-label">{candidate.operation === 'CREATE_NODE' ? '新章节候选' : '采纳后的正文'}</span>
+      <section><h3>{candidate.operation === 'CREATE_NODE' ? '新章节候选' : '采纳后的正文'}</h3>
         <div className="workspace-markdown" dangerouslySetInnerHTML={{ __html: markdownToHtml(proposed) }} /></section>
     </div>}
   </WorkspaceModal>;
@@ -219,7 +219,7 @@ export function WorkExportDialog({ project, workspace, sessionId, onClose }) {
     {dirty.length > 0 && <button type="button" disabled={busy} onClick={() => download(false)}>按已保存版本导出</button>}
     <button className="workspace-primary" type="button" disabled={busy} onClick={() => download(true)}>{busy ? '导出中…' : dirty.length ? '保存修改并导出' : '导出'}</button>
   </>}>
-    <p className="workspace-muted">导出已保存正文。</p>
+    <p className="workspace-muted">按正文目录顺序导出各节点的当前已保存正文，候选修改在采纳后纳入全文。</p>
     {dirty.length > 0 && <p className="workspace-notice">有 {dirty.length} 个节点包含未保存修改。</p>}
     <label htmlFor="work-export-format">格式</label><SelectField id="work-export-format" aria-label="导出格式" value={format} onChange={setFormat} options={[{ value: 'markdown', label: 'Markdown (.md)' }, { value: 'docx', label: 'Word (.docx)' }]} />
     {error && <p className="workspace-error" role="alert">{error}</p>}

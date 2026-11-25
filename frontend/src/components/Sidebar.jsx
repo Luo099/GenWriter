@@ -1,146 +1,76 @@
-import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Folder, Trash2, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Activity, BookOpenText, Boxes, ChevronDown, Feather, Folder, LibraryBig, MoreHorizontal,
+  PanelLeftClose, PanelLeftOpen, Plus, Settings2, SlidersHorizontal, Sparkles } from 'lucide-react';
 import ContentTree from './ContentTree';
-import BrandMark from './BrandMark';
+import { WorkspaceModal } from './WorkspaceDialogs';
 
-const navItems = [
-  { key: 'chat', label: '写作空间', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-  )},
-  { key: 'knowledge-bases', label: '知识库', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-    </svg>
-  )},
-  { key: 'memories', label: '记忆', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-      <path d="M12 2a10 10 0 0 1 10 10"></path>
-      <path d="M20.2 7.2A10 10 0 0 0 12 2v10"></path>
-    </svg>
-  )},
-  { key: 'writing-skills', label: '风格学习', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-      <path d="M12 2a10 10 0 0 1 10 10"></path>
-      <path d="M20.2 7.2A10 10 0 0 0 12 2v10"></path>
-      <path d="M12 12l-4 4"></path>
-      <path d="M12 12l4 4"></path>
-    </svg>
-  )},
-  { key: 'skills', label: '技能管理', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-    </svg>
-  )},
-  { key: 'settings', label: '设置', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-    </svg>
-  )},
-  { key: 'observability', label: 'AI Ops', icon: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-    </svg>
-  )},
+const managementItems = [
+  ['knowledge-bases', '知识库', LibraryBig], ['memories', '记忆', Sparkles],
+  ['writing-skills', '风格学习', Feather], ['skills', '技能管理', Boxes], ['settings', '设置', Settings2],
+  ['observability', 'AI Ops', Activity],
 ];
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'genwriter-sidebar-collapsed';
 const SIDEBAR_WIDTH_STORAGE_KEY = 'genwriter-sidebar-width';
-const SIDEBAR_COLLAPSED_WIDTH = 68;
-const SIDEBAR_COLLAPSE_THRESHOLD = 179;
+const SIDEBAR_COLLAPSED_WIDTH = 60;
 const SIDEBAR_MIN_EXPANDED_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 520;
+const SIDEBAR_NARROW_QUERY = '(max-width: 760px)';
 
 const readSidebarWidth = () => {
   try {
     const savedWidth = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
-    return Number.isFinite(savedWidth) && savedWidth > SIDEBAR_COLLAPSE_THRESHOLD
+    return Number.isFinite(savedWidth) && savedWidth >= SIDEBAR_MIN_EXPANDED_WIDTH
       ? Math.min(savedWidth, SIDEBAR_MAX_WIDTH)
-      : 260;
+      : 224;
   } catch {
-    return 260;
+    return 224;
   }
 };
 
-const Sidebar = ({
-  projects,
-  activeProject,
-  sessions,
-  activeSession,
-  view,
-  onSelectProject,
-  onNewProject,
-  onDeleteProject,
-  onUpdateProject,
-  onSelectSession,
-  onNewChat,
-  onDeleteSession,
-  onUpdateSession,
-  onNavigate,
-  workspace,
-  onSelectNode,
-  onLegacy,
-}) => {
+export default function Sidebar({
+  projects, activeProject, view, onSelectProject, onNewProject, onDeleteProject, onUpdateProject,
+  onNavigate, workspace, onSelectNode, onLegacy,
+}) {
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    try {
-      return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
+    try { return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'; }
+    catch { return false; }
   });
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth);
+  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(SIDEBAR_NARROW_QUERY).matches);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [hoveredSession, setHoveredSession] = useState(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [confirmDeleteProjectId, setConfirmDeleteProjectId] = useState(null);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef(null);
-  const resizeStateRef = useRef(null);
-
-  // 项目编辑状态
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingProjectName, setEditingProjectName] = useState('');
+  const [projectToDelete, setProjectToDelete] = useState(null);
   const projectInputRef = useRef(null);
-
-  // 会话编辑状态
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [editingSessionTitle, setEditingSessionTitle] = useState('');
-  const sessionInputRef = useRef(null);
+  const toggleRef = useRef(null);
+  const resizeStateRef = useRef(null);
+  const collapsed = isNarrow ? !mobileOpen : isCollapsed;
 
   useEffect(() => {
-    const narrow = window.matchMedia('(max-width: 760px)');
-    const update = () => { if (narrow.matches) setIsCollapsed(true); };
-    update();
+    const narrow = window.matchMedia(SIDEBAR_NARROW_QUERY);
+    const update = () => { setIsNarrow(narrow.matches); setMobileOpen(false); };
     narrow.addEventListener('change', update);
     return () => narrow.removeEventListener('change', update);
   }, []);
 
-  const setSidebarCollapsed = (collapsed) => {
-    setIsCollapsed(collapsed);
-    try {
-      window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
-    } catch {
-      // Keep the sidebar usable when browser storage is unavailable.
+  useEffect(() => {
+    if (editingProjectId) {
+      projectInputRef.current?.focus();
+      projectInputRef.current?.select();
     }
+  }, [editingProjectId]);
+
+  const setSidebarCollapsed = (next) => {
+    setIsCollapsed(next);
+    try { window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(next)); }
+    catch { /* Storage is optional. */ }
   };
 
   const persistSidebarWidth = (width) => {
-    try {
-      window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(Math.round(width)));
-    } catch {
-      // Keep the sidebar usable when browser storage is unavailable.
-    }
-  };
-
-  const toggleCollapsed = () => setSidebarCollapsed(!isCollapsed);
-  const navigate = (nextView) => {
-    onNavigate(nextView);
-    if (window.matchMedia('(max-width: 760px)').matches) setSidebarCollapsed(true);
+    try { window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(Math.round(width))); }
+    catch { /* Storage is optional. */ }
   };
 
   const handleResizePointerDown = (event) => {
@@ -158,29 +88,24 @@ const Sidebar = ({
   };
 
   const handleResizePointerMove = (event) => {
-    const resizeState = resizeStateRef.current;
-    if (!resizeState || resizeState.pointerId !== event.pointerId) return;
-
-    const nextWidth = Math.max(0, Math.min(
-      SIDEBAR_MAX_WIDTH,
-      resizeState.startWidth + event.clientX - resizeState.startX,
-    ));
-    const shouldCollapse = nextWidth <= SIDEBAR_COLLAPSE_THRESHOLD;
-    if (resizeState.collapsed !== shouldCollapse) {
-      resizeState.collapsed = shouldCollapse;
-      setSidebarCollapsed(shouldCollapse);
+    const drag = resizeStateRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const width = Math.min(SIDEBAR_MAX_WIDTH, drag.startWidth + event.clientX - drag.startX);
+    const nextCollapsed = width < SIDEBAR_MIN_EXPANDED_WIDTH;
+    if (nextCollapsed !== drag.collapsed) {
+      drag.collapsed = nextCollapsed;
+      setSidebarCollapsed(nextCollapsed);
     }
-
-    if (!shouldCollapse) {
-      resizeState.lastExpandedWidth = nextWidth;
-      setSidebarWidth(nextWidth);
+    if (!nextCollapsed) {
+      drag.lastExpandedWidth = width;
+      setSidebarWidth(width);
     }
   };
 
   const handleResizePointerEnd = (event) => {
-    const resizeState = resizeStateRef.current;
-    if (!resizeState || resizeState.pointerId !== event.pointerId) return;
-    persistSidebarWidth(resizeState.lastExpandedWidth);
+    const drag = resizeStateRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    persistSidebarWidth(drag.lastExpandedWidth);
     resizeStateRef.current = null;
     setIsResizing(false);
   };
@@ -188,354 +113,138 @@ const Sidebar = ({
   const handleResizeKeyDown = (event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-
-    const nextWidth = isCollapsed && event.key === 'ArrowRight'
-      ? SIDEBAR_MIN_EXPANDED_WIDTH
+    const width = isCollapsed && event.key === 'ArrowRight' ? SIDEBAR_MIN_EXPANDED_WIDTH
       : sidebarWidth + (event.key === 'ArrowRight' ? 16 : -16);
-    if (nextWidth <= SIDEBAR_COLLAPSE_THRESHOLD) {
+    if (width < SIDEBAR_MIN_EXPANDED_WIDTH) {
       setSidebarCollapsed(true);
       return;
     }
-
-    const boundedWidth = Math.min(nextWidth, SIDEBAR_MAX_WIDTH);
-    setSidebarWidth(boundedWidth);
+    const bounded = Math.min(width, SIDEBAR_MAX_WIDTH);
+    setSidebarWidth(bounded);
     setSidebarCollapsed(false);
-    persistSidebarWidth(boundedWidth);
+    persistSidebarWidth(bounded);
   };
 
-  // 项目编辑聚焦
-  useEffect(() => {
-    if (editingProjectId && projectInputRef.current) {
-      projectInputRef.current.focus();
-      projectInputRef.current.select();
-    }
-  }, [editingProjectId]);
-
-  // 会话编辑聚焦
-  useEffect(() => {
-    if (editingSessionId && sessionInputRef.current) {
-      sessionInputRef.current.focus();
-      sessionInputRef.current.select();
-    }
-  }, [editingSessionId]);
-
-  // 点击外部关闭用户菜单
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleDeleteClick = (e, session) => {
-    e.stopPropagation();
-    if (confirmDeleteId === session.id) {
-      onDeleteSession(session);
-      setConfirmDeleteId(null);
-    } else {
-      setConfirmDeleteId(session.id);
-    }
-  };
-
-  const handleDeleteProjectClick = (e, project) => {
-    e.stopPropagation();
-    if (confirmDeleteProjectId === project.id) {
-      onDeleteProject(project);
-      setConfirmDeleteProjectId(null);
-    } else {
-      setConfirmDeleteProjectId(project.id);
-    }
-  };
-
-  // ---------- 项目重命名 ----------
-  const startEditingProject = (e, project) => {
-    e.stopPropagation();
-    setEditingProjectId(project.id);
-    setEditingProjectName(project.name);
+  const closeMobile = () => {
+    if (!mobileOpen) return;
+    setMobileOpen(false);
+    toggleRef.current?.focus();
   };
 
   const commitProjectEdit = () => {
-    if (!editingProjectId) return;
-    const trimmed = editingProjectName.trim();
-    if (trimmed) {
-      const project = projects.find((p) => p.id === editingProjectId);
-      if (project && project.name !== trimmed) {
-        onUpdateProject({ ...project, name: trimmed });
-      }
-    }
+    const project = projects.find((item) => item.id === editingProjectId);
+    const name = editingProjectName.trim();
+    if (project && name && project.name !== name) onUpdateProject({ ...project, name });
     setEditingProjectId(null);
-    setEditingProjectName('');
   };
 
-  const handleProjectKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      commitProjectEdit();
-    } else if (e.key === 'Escape') {
-      setEditingProjectId(null);
-      setEditingProjectName('');
-    }
-  };
-
-  // ---------- 会话重命名 ----------
-  const startEditingSession = (e, session) => {
-    e.stopPropagation();
-    setEditingSessionId(session.id);
-    setEditingSessionTitle(session.title);
-  };
-
-  const commitSessionEdit = () => {
-    if (!editingSessionId) return;
-    const trimmed = editingSessionTitle.trim();
-    if (trimmed) {
-      const session = sessions.find((s) => s.id === editingSessionId);
-      if (session && session.title !== trimmed) {
-        onUpdateSession({ ...session, title: trimmed });
-      }
-    }
-    setEditingSessionId(null);
-    setEditingSessionTitle('');
-  };
-
-  const handleSessionKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      commitSessionEdit();
-    } else if (e.key === 'Escape') {
-      setEditingSessionId(null);
-      setEditingSessionTitle('');
-    }
-  };
-
-  return (
-    <aside
-      className={`sidebar ${isCollapsed ? 'is-collapsed' : ''}${isResizing ? ' is-resizing' : ''}`}
-      style={{ '--sidebar-current-width': `${sidebarWidth}px` }}
-    >
-      <div className="sidebar-brand"><BrandMark size={32} />{!isCollapsed && <span className="sidebar-wordmark">GenWriter</span>}</div>
+  return <>
+    {isNarrow && mobileOpen && <><div className="sidebar-mobile-spacer" /><div className="sidebar-scrim" aria-hidden="true" onClick={closeMobile} /></>}
+    <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}${isResizing ? ' is-resizing' : ''}${isNarrow && mobileOpen ? ' is-mobile-open' : ''}`}
+      style={{ '--sidebar-current-width': `${sidebarWidth}px` }} aria-label="GenWriter 导航"
+      onKeyDown={(event) => { if (event.key === 'Escape' && !event.defaultPrevented) closeMobile(); }}>
       <div className="sidebar-header">
-        <button
-          className="sidebar-collapse-btn"
-          onClick={toggleCollapsed}
-          title={isCollapsed ? '展开侧栏' : '收起侧栏'}
-          aria-label={isCollapsed ? '展开侧栏' : '收起侧栏'}
-          aria-expanded={!isCollapsed}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-            <path d={isCollapsed ? 'M9 4v16m6-10 3 2-3 2' : 'M9 4v16m6-4-3-2 3-2'}></path>
-          </svg>
-        </button>
-        <button className="new-chat-btn" onClick={() => { onNavigate('chat'); workspace?.preferences({ mode: 'agent', agentView: 'chat' }); onNewChat(); }} title="新对话" aria-label="新对话">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          {!isCollapsed && <span>新对话</span>}
+        {!collapsed && <div className="sidebar-brand"><span>GenWriter</span></div>}
+        <button className="sidebar-collapse-btn" type="button" ref={toggleRef}
+          aria-label={collapsed ? '展开侧栏' : '收起侧栏'} title={collapsed ? '展开侧栏' : '收起侧栏'} aria-expanded={!collapsed}
+          onClick={() => isNarrow ? setMobileOpen(!mobileOpen) : setSidebarCollapsed(!isCollapsed)}>
+          {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
         </button>
       </div>
-
-      {isCollapsed && (
-        <nav className="sidebar-compact-nav" aria-label="主导航">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              className={`sidebar-compact-nav-item ${view === item.key ? 'active' : ''}`}
-              onClick={() => navigate(item.key)}
-              title={item.label}
-              aria-label={item.label}
-              aria-current={view === item.key ? 'page' : undefined}
-            >
-              {item.icon}
-            </button>
-          ))}
-        </nav>
-      )}
-
-      <div className="sidebar-content">
-        {!isCollapsed && <nav className="sidebar-main-nav" aria-label="主导航">
-
-          {navItems.map((item) => <button key={item.key} type="button" className={`sidebar-nav-item ${view === item.key ? 'active' : ''}`} onClick={() => navigate(item.key)} aria-current={view === item.key ? 'page' : undefined}>
-            {item.icon}<span>{item.key === 'chat' ? '写作空间' : item.label}</span>{view === item.key && <i />}
-          </button>)}
-        </nav>}
-        <div className="project-section">
+      <nav className="sidebar-workspace-nav" aria-label="主导航">
+        <button className="sidebar-workspace-link" type="button" aria-label="工作区" title="工作区" aria-current={view === 'chat' ? 'page' : undefined}
+          onClick={() => { onNavigate('chat'); closeMobile(); }}>
+          <BookOpenText size={17} /><span>工作区</span>
+        </button>
+      </nav>
+      {!collapsed && <div className="sidebar-content">
+        <section className="project-section" aria-label="作品列表">
           <div className="project-section-header">
             <span className="section-label">作品</span>
-            <button className="section-action-btn" onClick={() => { onNavigate('chat'); onNewProject(); }} title="新建项目">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
+            <button className="section-action-btn" type="button" aria-label="新建作品" title="新建作品"
+              onClick={() => { onNavigate('chat'); onNewProject(); closeMobile(); }}><Plus size={16} /></button>
           </div>
           <div className="project-list">
-            {!projects.length && <button className="sidebar-project-empty" type="button" onClick={onNewProject}>创建你的第一部作品 <span>＋</span></button>}
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className={`project-item ${activeProject?.id === project.id ? 'active' : ''}`}
-                role="button" tabIndex={0} aria-label={`打开作品 ${project.name}`}
-                onClick={() => { onSelectProject(project); navigate('chat'); }}
-                onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelectProject(project); navigate('chat'); } }}
-                onMouseLeave={() => setConfirmDeleteProjectId(null)}
-              >
-                <Folder size={16} strokeWidth={2} className="project-icon" />
-                {editingProjectId === project.id ? (
-                  <input
-                    ref={projectInputRef}
-                    className="sidebar-edit-input"
-                    aria-label="重命名作品"
-                    value={editingProjectName}
-                    onChange={(e) => setEditingProjectName(e.target.value)}
-                    onBlur={commitProjectEdit}
-                    onKeyDown={handleProjectKeyDown}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <span
-                    className="project-name"
-                    onDoubleClick={(e) => startEditingProject(e, project)}
-                    title="双击重命名"
-                  >
-                    {project.name}
-                  </span>
-                )}
-                <span className="project-session-count">{project.sessionCount || 0}</span>
-                <button
-                  className="project-delete-btn"
-                  onClick={(e) => handleDeleteProjectClick(e, project)}
-                  title={confirmDeleteProjectId === project.id ? '再次点击确认删除' : '删除项目'}
-                >
-                  {confirmDeleteProjectId === project.id ? (
-                    <Check size={12} strokeWidth={2} />
-                  ) : (
-                    <Trash2 size={12} strokeWidth={2} />
-                  )}
-                </button>
-              </div>
-            ))}
+            {projects.map((project) => <div className={`project-item${project.id === activeProject?.id ? ' active' : ''}`} key={project.id}>
+              {editingProjectId === project.id ? <input ref={projectInputRef} className="sidebar-edit-input" aria-label="作品名称"
+                value={editingProjectName} onChange={(event) => setEditingProjectName(event.target.value)} onBlur={commitProjectEdit}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+                  if (event.key === 'Enter') commitProjectEdit();
+                  else if (event.key === 'Escape') { event.stopPropagation(); setEditingProjectId(null); }
+                }} /> : <button className="project-link" type="button" title={project.name}
+                aria-current={project.id === activeProject?.id ? 'true' : undefined}
+                onClick={() => { if (project.id !== activeProject?.id) onSelectProject(project); onNavigate('chat'); closeMobile(); }}>
+                <Folder size={15} className="project-icon" /><span className="project-name">{project.name}</span>
+              </button>}
+              <details className="tree-menu sidebar-project-menu" onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+              }} onKeyDown={(event) => {
+                if (event.key !== 'Escape' || !event.currentTarget.open) return;
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector('summary')?.focus();
+              }}>
+                <summary aria-label={`${project.name}的作品操作`} title="作品操作"><MoreHorizontal size={15} /></summary>
+                <div className="tree-menu-items">
+                  <button type="button" onClick={(event) => {
+                    event.currentTarget.closest('details').open = false;
+                    setEditingProjectName(project.name);
+                    setEditingProjectId(project.id);
+                  }}>重命名作品</button>
+                  <button className="danger" type="button" onClick={(event) => {
+                    const menu = event.currentTarget.closest('details');
+                    menu.open = false;
+                    menu.querySelector('summary')?.focus();
+                    setProjectToDelete(project);
+                  }}>删除作品…</button>
+                </div>
+              </details>
+            </div>)}
           </div>
-        </div>
-
-        <div className="divider" />
-
-        {workspace && activeProject && <ContentTree workspace={workspace} onSelect={onSelectNode} onLegacy={onLegacy} />}
-
-        <div className={`session-section${workspace?.mode === 'studio' ? ' studio-sessions' : ''}`}>
-          <div className="session-section-header">
-            <span className="section-label">会话</span>
-          </div>
-          <div className="session-list">
-            {sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
-                role="button" tabIndex={0} aria-label={`打开会话 ${session.title}`}
-                onFocus={() => setHoveredSession(session.id)}
-                onKeyDown={(event) => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelectSession(session); navigate('chat'); workspace?.preferences({ agentView: 'chat' }); } }}
-                onClick={() => { onSelectSession(session); onNavigate('chat'); workspace?.preferences({ agentView: 'chat' }); }}
-                onMouseEnter={() => setHoveredSession(session.id)}
-                onMouseLeave={() => {
-                  setHoveredSession(null);
-                  setConfirmDeleteId(null);
-                }}
-              >
-                <MessageSquare size={16} strokeWidth={2} className="session-icon" />
-                {editingSessionId === session.id ? (
-                  <input
-                    ref={sessionInputRef}
-                    className="sidebar-edit-input"
-                    aria-label="重命名会话"
-                    value={editingSessionTitle}
-                    onChange={(e) => setEditingSessionTitle(e.target.value)}
-                    onBlur={commitSessionEdit}
-                    onKeyDown={handleSessionKeyDown}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <span
-                    className="session-title"
-                    onDoubleClick={(e) => startEditingSession(e, session)}
-                    title="双击重命名"
-                  >
-                    {session.title}
-                  </span>
-                )}
-                {hoveredSession === session.id && (
-                  <button
-                    className="session-delete-btn"
-                    onClick={(e) => handleDeleteClick(e, session)}
-                    title={confirmDeleteId === session.id ? '再次点击确认删除' : '删除对话'}
-                  >
-                    {confirmDeleteId === session.id ? (
-                      <Check size={14} strokeWidth={2} />
-                    ) : (
-                      <Trash2 size={14} strokeWidth={2} />
-                    )}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="sidebar-footer" ref={userMenuRef}>
-        <button type="button" aria-label="用户菜单" aria-expanded={isUserMenuOpen}
-          className="user-info"
-          onClick={() => setIsUserMenuOpen((prev) => !prev)}
-        >
-          <div className="user-avatar">作</div>
-          <span className="user-name">创作者</span>
-          <svg
-            className={`user-menu-arrow ${isUserMenuOpen ? 'open' : ''}`}
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
-        {isUserMenuOpen && (
-          <div className="user-dropdown-menu">
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                className={`user-dropdown-item ${view === item.key ? 'active' : ''}`}
-                onClick={() => {
-                  navigate(item.key);
-                  setIsUserMenuOpen(false);
-                }}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      <div
-        className="sidebar-resize-handle"
-        role="separator"
-        aria-label="调整侧栏宽度"
-        aria-orientation="vertical"
-        aria-valuemin={SIDEBAR_COLLAPSED_WIDTH}
-        aria-valuemax={SIDEBAR_MAX_WIDTH}
-        aria-valuenow={isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : Math.round(sidebarWidth)}
-        tabIndex={0}
-        onPointerDown={handleResizePointerDown}
-        onPointerMove={handleResizePointerMove}
-        onPointerUp={handleResizePointerEnd}
-        onPointerCancel={handleResizePointerEnd}
-        onKeyDown={handleResizeKeyDown}
-      />
+        </section>
+        {workspace && activeProject && <ContentTree workspace={workspace}
+          onSelect={(nodeId) => { onSelectNode(nodeId); closeMobile(); }}
+          onLegacy={() => { onLegacy(); closeMobile(); }} />}
+      </div>}
+      <footer className="sidebar-footer">
+        <details className="sidebar-management" onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+        }} onKeyDown={(event) => {
+          if (event.key !== 'Escape' || !event.currentTarget.open) return;
+          event.stopPropagation();
+          event.currentTarget.open = false;
+          event.currentTarget.querySelector('summary')?.focus();
+        }}>
+          <summary className={view === 'chat' ? '' : 'active'} aria-label="管理" title="管理">
+            <SlidersHorizontal size={17} /><span>管理</span><ChevronDown className="sidebar-management-chevron" size={14} />
+          </summary>
+          <nav className="sidebar-management-links" aria-label="管理页面">
+            {managementItems.map((item) => {
+              const [key, label, Icon] = item;
+              return <button key={key} type="button" aria-current={view === key ? 'page' : undefined}
+                onClick={(event) => {
+                  const menu = event.currentTarget.closest('details');
+                  menu.open = false;
+                  menu.querySelector('summary')?.focus();
+                  onNavigate(key);
+                  closeMobile();
+                }}><Icon size={16} />{label}</button>;
+            })}
+          </nav>
+        </details>
+      </footer>
+      {!isNarrow && <div className="sidebar-resize-handle" role="separator" aria-label="调整侧栏宽度" aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_COLLAPSED_WIDTH} aria-valuemax={SIDEBAR_MAX_WIDTH}
+        aria-valuenow={collapsed ? SIDEBAR_COLLAPSED_WIDTH : Math.round(sidebarWidth)} tabIndex={0}
+        onPointerDown={handleResizePointerDown} onPointerMove={handleResizePointerMove}
+        onPointerUp={handleResizePointerEnd} onPointerCancel={handleResizePointerEnd} onKeyDown={handleResizeKeyDown} />}
     </aside>
-  );
-};
-
-export default Sidebar;
+    {projectToDelete && <WorkspaceModal title="删除作品" onClose={() => setProjectToDelete(null)} footer={<>
+      <button type="button" onClick={() => setProjectToDelete(null)}>取消</button>
+      <button type="button" className="workspace-primary" onClick={() => { onDeleteProject(projectToDelete); setProjectToDelete(null); }}>确认删除</button>
+    </>}>
+      <p>确认删除「{projectToDelete.name}」和此作品的正文、会话？</p>
+    </WorkspaceModal>}
+  </>;
+}

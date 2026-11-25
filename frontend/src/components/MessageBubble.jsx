@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, RefreshCw, ChevronUp, ChevronDown, Link as LinkIcon } from 'lucide-react';
+import { Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkingPanel from './ThinkingPanel';
@@ -28,16 +28,16 @@ const intentLabel = (intent) => INTENT_LABELS[intent] || intent || '未知意图
 const typeLabel = (type) => TYPE_LABELS[type] || type || '未知类型';
 
 const STAGE_CONFIG = {
-  '任务启动': { label: '启动', stageClass: 'stage-neutral' },
-  '意图识别': { label: '意图识别', stageClass: 'stage-neutral' },
-  '知识库检索': { label: '知识检索', stageClass: 'stage-neutral' },
-  '大纲生成': { label: '大纲生成', stageClass: 'stage-neutral' },
-  '正文写作': { label: '正文写作', stageClass: 'stage-neutral' },
-  '内容评审': { label: '内容评审', stageClass: 'stage-neutral' },
-  '润色': { label: '润色', stageClass: 'stage-neutral' },
-  '直接回答': { label: '直接回答', stageClass: 'stage-neutral' },
-  '任务完成': { label: '完成', stageClass: 'stage-success' },
-  '任务失败': { label: '失败', stageClass: 'stage-error' },
+  '任务启动': { label: '启动', color: '#6b7280', bg: '#f3f4f6' },
+  '意图识别': { label: '意图识别', color: '#6b7280', bg: '#f3f4f6' },
+  '知识库检索': { label: '知识检索', color: '#6b7280', bg: '#f3f4f6' },
+  '大纲生成': { label: '大纲生成', color: '#6b7280', bg: '#f3f4f6' },
+  '正文写作': { label: '正文写作', color: '#6b7280', bg: '#f3f4f6' },
+  '内容评审': { label: '内容评审', color: '#6b7280', bg: '#f3f4f6' },
+  '润色': { label: '润色', color: '#6b7280', bg: '#f3f4f6' },
+  '直接回答': { label: '直接回答', color: '#6b7280', bg: '#f3f4f6' },
+  '任务完成': { label: '完成', color: '#059669', bg: '#ecfdf5' },
+  '任务失败': { label: '失败', color: '#dc2626', bg: '#fef2f2' },
 };
 
 const parseStatusText = (text) => {
@@ -79,10 +79,11 @@ const renderIntentDetail = (data) => (
   </div>
 );
 
-const scoreClass = (score) => {
-  if (score >= 7) return 'score-high';
-  if (score >= 5) return 'score-mid';
-  return 'score-low';
+const scoreColor = (score) => {
+  if (score >= 9) return '#059669';
+  if (score >= 7) return '#10b981';
+  if (score >= 5) return '#f59e0b';
+  return '#ef4444';
 };
 
 const verdictClass = (verdict) => {
@@ -93,9 +94,9 @@ const verdictClass = (verdict) => {
 };
 
 const verdictLabel = (verdict) => {
-  if (verdict === 'PASS') return <><Check size={12} strokeWidth={2} /> 通过</>;
-  if (verdict === 'REVISE_DRAFT') return <><X size={12} strokeWidth={2} /> 需重新起草</>;
-  if (verdict === 'REVISE_POLISH') return <><RefreshCw size={12} strokeWidth={2} /> 需再次润色</>;
+  if (verdict === 'PASS') return '✓ 通过';
+  if (verdict === 'REVISE_DRAFT') return '✗ 需重新起草';
+  if (verdict === 'REVISE_POLISH') return '↻ 需再次润色';
   return verdict;
 };
 
@@ -105,7 +106,7 @@ const renderReviewDetail = (data) => {
     <div className="tp-review-card">
       <div className="tp-score-header">
         <span className="tp-score-label">综合评分</span>
-        <span className={`tp-score-number ${scoreClass(data['综合评分'])}`}>
+        <span className="tp-score-number" style={{ color: scoreColor(data['综合评分']) }}>
           {data['综合评分']}<span className="tp-score-max">/10</span>
         </span>
         <span className={`tp-verdict-badge ${verdictClass(data['结论'])}`}>
@@ -119,11 +120,11 @@ const renderReviewDetail = (data) => {
               <span className="tp-dim-label">{dim}</span>
               <div className="tp-dim-bar-bg">
                 <div
-                  className={`tp-dim-bar-fill ${scoreClass(data[dim])}`}
-                  style={{ width: `${(Number(data[dim]) / 10) * 100}%` }}
+                  className="tp-dim-bar-fill"
+                  style={{ width: `${(Number(data[dim]) / 10) * 100}%`, backgroundColor: scoreColor(data[dim]) }}
                 />
               </div>
-              <span className={`tp-dim-score ${scoreClass(data[dim])}`}>{data[dim]}</span>
+              <span className="tp-dim-score" style={{ color: scoreColor(data[dim]) }}>{data[dim]}</span>
             </div>
           ))}
         </div>
@@ -144,9 +145,9 @@ const StreamingText = ({ text, isStreaming }) => {
 };
 
 const StatusStageBadge = ({ stage }) => {
-  const config = STAGE_CONFIG[stage] || { label: stage, stageClass: 'stage-neutral' };
+  const config = STAGE_CONFIG[stage] || { label: stage, color: '#6b7280', bg: '#f3f4f6' };
   return (
-    <span className={`status-stage-badge ${config.stageClass}`}>
+    <span className="status-stage-badge" style={{ color: config.color, backgroundColor: config.bg }}>
       {config.label}
     </span>
   );
@@ -207,7 +208,11 @@ const SourcesList = ({ sources }) => {
         onClick={() => setExpanded(!expanded)}
       >
         <span className="sources-icon">
-          <LinkIcon size={12} strokeWidth={1.2} />
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M6.5 3H3.5C2.67 3 2 3.67 2 4.5V7.5C2 8.33 2.67 9 3.5 9H6.5C7.33 9 8 8.33 8 7.5V4.5C8 3.67 7.33 3 6.5 3Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9.5 7H12.5C13.33 7 14 7.67 14 8.5V11.5C14 12.33 13.33 13 12.5 13H9.5C8.67 13 8 12.33 8 11.5V8.5C8 7.67 8.67 7 9.5 7Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 4.5L8 11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
         </span>
         <span className="sources-title">参考来源</span>
         <span className="sources-count">{sources.length}</span>
@@ -320,7 +325,7 @@ const MessageBubble = ({ message, onExport }) => {
               onClick={() => setThinkingExpanded(!thinkingExpanded)}
             >
               <span className="thinking-process-arrow">
-                {thinkingExpanded ? <ChevronUp size={12} strokeWidth={2} /> : <ChevronDown size={12} strokeWidth={2} />}
+                {thinkingExpanded ? '▲' : '▼'}
               </span>
               <span className="thinking-process-label">工作过程</span>
               {!thinkingExpanded && (
@@ -396,8 +401,8 @@ const MessageBubble = ({ message, onExport }) => {
         )}
         {canExport && (
           <div className="message-actions">
-            <button className="message-action-btn" onClick={() => onExport?.(message)}>
-              导出
+            <button className="message-action-btn" type="button" aria-label="导出这条回复" onClick={() => onExport?.(message)}>
+              <Download size={13} />导出
             </button>
           </div>
         )}

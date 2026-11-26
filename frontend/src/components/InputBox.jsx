@@ -287,7 +287,7 @@ const InputBox = ({
           rows={1}
         />
         <AttachmentPreview attachments={attachments} onRemove={handleRemoveAttachment} onRetry={handleRetryAttachment} />
-        {targetHint && <p className="composer-target-hint" title={targetHint} role="status">{targetHint}</p>}
+        {/* targetHint 已隐藏 */}
         <div className="composer-controls">
           <div className="composer-options">
             <SelectField className={`composer-mode ${isGhostwrite ? 'is-ghostwrite' : ''}`} aria-label="助手模式" menuWidth={136}

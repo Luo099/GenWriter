@@ -60,3 +60,15 @@ replay_pid*.log
 
 ### CodeBuddy agent data ###
 .codebuddy/
+
+### Codex agent data ###
+.thinkrail/
+
+### 本地临时产物 ###
+*.bak
+temp_request.json
+/org/
+*.class
+
+### 测试源码（本地保留，不纳入仓库） ###
+/src/test/
